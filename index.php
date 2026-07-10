@@ -704,7 +704,6 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                 <i class="fas fa-play"></i> Начать проверку
                             </button>
                         </div>
-                        <p class="sync-intro">Сверяет список модеров из Google-таблицы с ролью «Модератор» на сервере — заходит под селфботом напрямую, свежий результат занимает около минуты.</p>
                         <div class="sync-loader" id="syncLoader">
                             <p id="syncLoaderStatus">Подключение…</p>
                         </div>
