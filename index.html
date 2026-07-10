@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futurama Moders | Главная</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+</head>
+<body>
+    <!-- Экран входа -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <i class="fas fa-shield-halved"></i>
+                <div>
+                    <div class="auth-brand">Futurama</div>
+                    <div class="auth-brand-sub">Moderator</div>
+                </div>
+            </div>
+            <h2 class="auth-title">Вход в панель</h2>
+            <p class="auth-subtitle">Введите логин и пароль</p>
+
+            <form class="auth-form" id="authForm" autocomplete="on">
+                <div class="auth-field">
+                    <label>Логин</label>
+                    <input type="text" id="loginUsername" autocomplete="username" required>
+                </div>
+                <div class="auth-field">
+                    <label>Пароль</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" required>
+                </div>
+                <div class="auth-error" id="authError"></div>
+                <button type="submit" class="auth-submit">
+                    <i class="fas fa-right-to-bracket"></i> Войти
+                </button>
+            </form>
+
+            <div class="auth-hint">
+                <details>
+                    <summary>Тестовые аккаунты</summary>
+                    <div class="auth-hint-list">
+                        <div><b>admin</b> / admin — Администратор</div>
+                        <div><b>glk</b> / glk — Главный куратор</div>
+                        <div><b>curator</b> / curator — Куратор</div>
+                        <div><b>master</b> / master — Мастер</div>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <button class="mobile-nav-toggle" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+
+        <aside class="sidebar" id="mainSidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>Futurama <span>Moderator</span></span>
+                </div>
+                <div class="sidebar-user-card">
+                    <div class="avatar-circle">M</div>
+                    <div style="overflow:hidden;">
+                        <div class="u-name">Модератор</div>
+                        <div class="u-role">Модерация</div>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-label">Основное</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="profile"><i class="fas fa-user-circle"></i> <span>Профиль</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" data-tab="home"><i class="fas fa-house"></i> <span>Главная</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="table"><i class="fas fa-table-list"></i> <span>Таблица</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="table-masters"><i class="fas fa-user-graduate"></i> <span>Таблица для мастеров</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="warnings"><i class="fas fa-triangle-exclamation"></i> <span>Выговоры</span></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Собеседования</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="interview-moder"><i class="fas fa-user-check"></i> <span>Собес на модера</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="interview-master"><i class="fas fa-chalkboard-user"></i> <span>Собес на мастера</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="reatt-moders"><i class="fas fa-file-pen"></i> <span>Переаттестация модеров</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="reatt-masters"><i class="fas fa-file-signature"></i> <span>Переаттестация мастеров</span></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Памятки</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="memo-masters"><i class="fas fa-clipboard-list"></i> <span>Памятка для мастеров</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="memo-curators"><i class="fas fa-shield-halved"></i> <span>Памятка для кураторов</span></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Активности</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="events"><i class="fas fa-bullhorn"></i> <span>Ивенты</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="giveaways"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="wheel"><i class="fas fa-dharmachakra"></i> <span>Колесо фортуны</span></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Отчёты</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="reports"><i class="fas fa-file-lines"></i> <span>Отчётность</span></a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="tokens"><i class="fas fa-coins"></i> <span>Токены</span></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Level up</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="levelup"><i class="fas fa-arrow-up-right-dots"></i> <span>Level up</span></a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Таблица</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="tokens-table"><i class="fas fa-table"></i> <span>Таблица</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <button class="sidebar-logout" id="sidebarLogout" type="button">
+                <i class="fas fa-right-from-bracket"></i> Выйти
+            </button>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1 id="pageTitle">Главная</h1>
+                    <p id="pageSubtitle">Ваш состав</p>
+                </div>
+                <div class="header-actions"></div>
+            </header>
+
+            <div class="page-body">
+                <!-- Профиль -->
+                <section class="tab-page" id="tab-profile">
+                    <div class="card">
+                        <div class="card-header"><h3>Профиль</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-user-circle"></i>
+                            <h2>Профиль</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Главная -->
+                <section class="tab-page active" id="tab-home">
+                    <div class="card">
+                        <div class="card-header"><h3>Ваш состав</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-users"></i>
+                            <h2>Состав модерации</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Таблица -->
+                <section class="tab-page" id="tab-table">
+                    <div class="card">
+                        <div class="card-header"><h3>Таблица</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-table"></i>
+                            <h2>Таблица</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Таблица для мастеров -->
+                <section class="tab-page" id="tab-table-masters">
+                    <div class="card">
+                        <div class="card-header"><h3>Таблица для мастеров</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-table-cells-large"></i>
+                            <h2>Таблица для мастеров</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Собес на модера -->
+                <section class="tab-page" id="tab-interview-moder">
+                    <div class="info-banner">
+                        <div class="ib-icon"><i class="fas fa-circle-info"></i></div>
+                        <div class="ib-text">
+                            Перед началом собеседования обязательно спрашивайте, <b>сколько лет пользователю</b>. Кандидат может выбрать <b>1 вариант из 3</b>.
+                            <span class="q-pass"><i class="fas fa-check-circle"></i>Проходной балл 7/10</span>
+                        </div>
+                    </div>
+
+                    <div class="candidate-card">
+                        <div class="cc-field">
+                            <label>Коренной ник</label>
+                            <input id="candNick" placeholder="" autocomplete="off">
+                        </div>
+                        <div class="cc-field">
+                            <label>ID</label>
+                            <input id="candId" placeholder="Discord ID" autocomplete="off">
+                        </div>
+                        <div class="cc-field">
+                            <label>Проверяющий</label>
+                            <input id="candReviewer" placeholder="" autocomplete="off">
+                        </div>
+                        <div class="cc-score">
+                            <div class="cc-score-label">Балл</div>
+                            <div class="cc-score-value" id="candScore">0 / 10</div>
+                        </div>
+                        <button class="cc-reset" id="resetRatings" type="button" title="Сбросить оценки этого варианта">
+                            <i class="fas fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="cc-actions">
+                        <button class="cc-submit" id="submitReport" type="button">
+                            <i class="fas fa-paper-plane"></i> Отправить отчёт
+                        </button>
+                    </div>
+
+                    <div class="variant-tabs">
+                        <button class="variant-btn active" data-variant="1">Вариант 1</button>
+                        <button class="variant-btn" data-variant="2">Вариант 2</button>
+                        <button class="variant-btn" data-variant="3">Вариант 3</button>
+                    </div>
+
+                    <div class="questions-list" id="questionsList"></div>
+
+                    <div class="reports-section">
+                        <div class="reports-header">
+                            <h3><i class="fas fa-clipboard-check"></i> История отчётов</h3>
+                            <span class="reports-count" id="reportsCount">0</span>
+                        </div>
+                        <div class="reports-list" id="reportsList"></div>
+                    </div>
+                </section>
+
+                <!-- Собес на мастера -->
+                <section class="tab-page" id="tab-interview-master">
+                    <div class="info-banner">
+                        <div class="ib-icon"><i class="fas fa-circle-info"></i></div>
+                        <div class="ib-text">
+                            Собеседование на мастера — доступно <b>кураторам и выше</b>. Всего <b>15 вопросов</b>.
+                            <span class="q-pass"><i class="fas fa-check-circle"></i>Проходной балл 11/15</span>
+                        </div>
+                    </div>
+
+                    <div class="candidate-card">
+                        <div class="cc-field">
+                            <label>Коренной ник</label>
+                            <input id="mCandNick" placeholder="" autocomplete="off">
+                        </div>
+                        <div class="cc-field">
+                            <label>ID</label>
+                            <input id="mCandId" placeholder="Discord ID" autocomplete="off">
+                        </div>
+                        <div class="cc-field">
+                            <label>Проверяющий</label>
+                            <input id="mCandReviewer" placeholder="" autocomplete="off">
+                        </div>
+                        <div class="cc-score">
+                            <div class="cc-score-label">Балл</div>
+                            <div class="cc-score-value" id="mCandScore">0 / 15</div>
+                        </div>
+                        <button class="cc-reset" id="mResetRatings" type="button" title="Сбросить оценки">
+                            <i class="fas fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+
+                    <div class="cc-actions">
+                        <button class="cc-submit" id="mSubmitReport" type="button">
+                            <i class="fas fa-paper-plane"></i> Отправить отчёт
+                        </button>
+                    </div>
+
+                    <div class="questions-list" id="mastersInterviewList"></div>
+
+                    <div class="reports-section">
+                        <div class="reports-header">
+                            <h3><i class="fas fa-clipboard-check"></i> История отчётов</h3>
+                            <span class="reports-count" id="mReportsCount">0</span>
+                        </div>
+                        <div class="reports-list" id="mReportsList"></div>
+                    </div>
+                </section>
+
+                <!-- Памятка для мастеров -->
+                <section class="tab-page" id="tab-memo-masters">
+                    <div class="memo-card">
+                        <div class="memo-title">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Памятка для мастеров</span>
+                        </div>
+                        <ol class="memo-list">
+                            <li><span>Принять / отклонить заявку.</span></li>
+                            <li><span>При выборе смены объяснить про ПТ с 1–30 руму.</span></li>
+                            <li><span>Уши не выключать; если отходит — выходит с войса.</span></li>
+                            <li><span>Удалить заявку.</span></li>
+                            <li><span>Рассказать про команды <code>/action</code> и <code>/voice</code> (спросить, всё ли ясно).</span></li>
+                            <li><span>Есть 3 степени наказания: устное предупреждение, мут или бан — в зависимости от ситуации.</span></li>
+                            <li><span>Рассказать про канал репортов (СТАФФ / ЧАТ / СПОНСОРОВ — не трогать).</span></li>
+                            <li><span>Бан-пруфы / мут-пруфы скидываются в обязательном порядке.</span></li>
+                            <li><span>Канал «Информация» на локалке — правила ветки + шпора.</span></li>
+                            <li><span>Отпуска.</span></li>
+                            <li><span>Ознакомить с категорией «Основное».</span></li>
+                            <li><span>1-й день — ознакомительный, к работе приступать со следующего дня.</span></li>
+                            <li><span>Обязательно вести откат в мод-войсах.</span></li>
+                            <li><span>Персоналу (стафф) наказание не выдаётся — пишется репорт при нарушении правил.</span></li>
+                            <li>
+                                <span>Проговаривать модерам инфу: если они находятся в войсе меньше:
+                                    <ul>
+                                        <li>4 часов в неделю — снятие;</li>
+                                        <li>7 часов в неделю — выговор 14 дней;</li>
+                                        <li>10 часов в неделю — выговор 7 дней;</li>
+                                        <li>12 часов в неделю — устник 7 дней.</li>
+                                    </ul>
+                                </span>
+                            </li>
+                            <li><span>Брать на ветку от 3 дней на сервере.</span></li>
+                        </ol>
+                    </div>
+                </section>
+
+                <!-- Памятка для кураторов -->
+                <section class="tab-page" id="tab-memo-curators">
+                    <div class="memo-card">
+                        <div class="memo-title">
+                            <i class="fas fa-shield-halved"></i>
+                            <span>Гайд: как не вьебать рольку куратора на сервере Futurama</span>
+                        </div>
+                        <p class="memo-intro">
+                            Этот гайд предназначен для кураторов сервера Futurama. Он поможет грамотно разбирать
+                            репорты на модераторов и мастеров, проводить наборы и контролировать активность ветки.
+                        </p>
+
+                        <div class="memo-section">
+                            <div class="memo-section-title"><i class="fas fa-gavel"></i> Разбор репортов</div>
+                            <p>
+                                Куратор рассматривает репорты на мастеров и модераторов. Процесс аналогичен описанному
+                                в гайде мастера: собираются доказательства, уточняется ситуация, после чего выносится
+                                решение по наказанию — <b>устное предупреждение</b> или <b>выговор</b>.
+                            </p>
+                        </div>
+
+                        <div class="memo-section">
+                            <div class="memo-section-title"><i class="fas fa-user-plus"></i> Наборы</div>
+                            <p>
+                                Кураторы имеют право проводить наборы модераторов — подробная инструкция в гайде мастера.
+                            </p>
+                            <p style="margin-top: 0.6rem;">Также куратор может набирать <b>мастеров</b>. Для этого необходимо:</p>
+                            <ul class="memo-list memo-list-bullets">
+                                <li><span>Согласовать кандидата с <b>администратором ветки</b> и <b>главным куратором</b>.</span></li>
+                                <li><span>Кандидат должен быть <b>не младше 16 лет</b>.</span></li>
+                                <li><span>Кандидат должен пройти <b>собеседование на мастера</b>. Ссылку на вопросы выдаёт админ ветки.</span></li>
+                            </ul>
+                        </div>
+
+                        <div class="memo-section">
+                            <div class="memo-section-title"><i class="fas fa-clock"></i> Подсчёт часов ветки</div>
+                            <p>
+                                Каждый <b>понедельник</b> куратор обязан подсчитать часы голосовой активности всех
+                                модераторов ветки.
+                            </p>
+                            <ol class="memo-list">
+                                <li><span>Команда: <code>/voice группа:Moderator target:ID</code></span></li>
+                                <li><span>Выберите в выпадающем списке <b>прошлую неделю</b> и зафиксируйте количество часов.</span></li>
+                                <li><span>Впишите значение в графу <b>«Часы»</b> в таблице.</span></li>
+                            </ol>
+                        </div>
+
+                        <div class="memo-section">
+                            <div class="memo-section-title"><i class="fas fa-user-secret"></i> Проверка на double staff</div>
+                            <p>
+                                Также по <b>понедельникам</b> куратор обязан проверять модераторов на двойной стаффинг.
+                            </p>
+                            <ol class="memo-list">
+                                <li><span>Зайдите в чат: <a href="https://discord.com/channels/531970658633252864/1277270855575142611" target="_blank" rel="noopener" class="memo-link">discord.com/channels/.../1277270855575142611</a></span></li>
+                                <li><span>Введите команду: <code>!checkguilds ID</code></span></li>
+                            </ol>
+                            <p style="margin-top: 0.6rem;">Допустимы сервера-партнёры:</p>
+                            <div class="memo-tags">
+                                <span class="memo-tag">Elysium</span>
+                                <span class="memo-tag">Hatory</span>
+                                <span class="memo-tag">Darkness</span>
+                                <span class="memo-tag">Solisaid</span>
+                                <span class="memo-tag">Stockholm</span>
+                                <span class="memo-tag">Aletheia</span>
+                            </div>
+                        </div>
+
+                        <div class="memo-section">
+                            <div class="memo-section-title"><i class="fas fa-ghost"></i> Проверка таблицы на мёртвые души</div>
+                            <p>
+                                Каждую неделю проверяйте таблицу на наличие неактивных модераторов, которые были
+                                удалены с сервера, но остались в таблице. При нахождении таких пользователей — удалите
+                                их из таблицы вручную.
+                            </p>
+                            <p class="memo-warn">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                Не забывайте удалять их и из <b>смены</b>.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Переаттестация для мастеров -->
+                <section class="tab-page" id="tab-reatt-masters">
+                    <div class="card">
+                        <div class="card-header"><h3>Переаттестация для мастеров</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-file-signature"></i>
+                            <h2>Переаттестация для мастеров</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Переаттестация для модеров -->
+                <section class="tab-page" id="tab-reatt-moders">
+                    <div class="info-banner">
+                        <div class="ib-icon"><i class="fas fa-question-circle"></i></div>
+                        <div class="ib-text">Вопросы для переаттестации модеров. Нажмите «Показать ответ», чтобы увидеть правильный вариант.</div>
+                    </div>
+
+                    <div class="questions-list" id="modersReattList"></div>
+                </section>
+
+                <!-- Ивенты -->
+                <section class="tab-page" id="tab-events">
+                    <div class="card">
+                        <div class="card-header"><h3>Ивенты</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-bullhorn"></i>
+                            <h2>Ивенты</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Розыгрыши -->
+                <section class="tab-page" id="tab-giveaways">
+                    <div class="card">
+                        <div class="card-header"><h3>Розыгрыши</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-gift"></i>
+                            <h2>Розыгрыши</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Колесо фортуны -->
+                <section class="tab-page" id="tab-wheel">
+                    <div class="wheel-container">
+                        <div class="wheel-box card">
+                            <div class="wheel-wrapper">
+                                <div class="wheel-pointer"></div>
+                                <canvas id="wheel-canvas" width="500" height="500"></canvas>
+                            </div>
+
+                            <button id="spin-button" class="btn-spin" type="button">
+                                <i class="fas fa-rotate"></i> КРУТИТЬ КОЛЕСО
+                            </button>
+
+                            <div id="winner-box" class="winner-display">
+                                <div class="winner-label">Победитель</div>
+                                <div id="winner-name" class="winner-name">—</div>
+                            </div>
+                        </div>
+
+                        <div class="controls-box">
+                            <div class="controls-header">
+                                <span><i class="fas fa-list-ul"></i> Варианты</span>
+                                <button class="wheel-add-btn" id="wheelAddBtn" type="button" title="Добавить вариант"><i class="fas fa-plus"></i></button>
+                            </div>
+
+                            <div id="options-list" class="wheel-options"></div>
+
+                            <div class="wheel-footer">
+                                <button class="wheel-reset" id="wheelResetBtn" type="button"><i class="fas fa-rotate-left"></i> Сбросить</button>
+                                <select id="wheelSpeed" class="wheel-speed-select" title="Скорость кручения">
+                                    <option value="1">Очень медленно</option>
+                                    <option value="2">Медленно</option>
+                                    <option value="3" selected>Норма</option>
+                                    <option value="4">Быстро</option>
+                                    <option value="5">Очень быстро</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Выговоры -->
+                <section class="tab-page" id="tab-warnings">
+                    <div class="card">
+                        <div class="card-header"><h3>Выговоры</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            <h2>Выговоры</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Отчётность -->
+                <section class="tab-page" id="tab-reports">
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <i class="fas fa-file-lines" style="color: var(--accent); font-size:1.3rem;"></i>
+                                <h3>Все отчёты собеседований</h3>
+                            </div>
+                            <span class="reports-count" id="allReportsCount">0</span>
+                        </div>
+                        <div class="reports-filter" id="reportsFilter">
+                            <button class="rf-btn active" data-filter="all" type="button">Все</button>
+                            <button class="rf-btn" data-filter="moder" type="button">Собес на модера</button>
+                            <button class="rf-btn" data-filter="master" type="button">Собес на мастера</button>
+                        </div>
+                        <div class="reports-list" id="allReportsList"></div>
+                    </div>
+                </section>
+
+                <!-- Токены -->
+                <section class="tab-page" id="tab-tokens">
+                    <div class="card">
+                        <div class="card-header"><h3>Токены</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-coins"></i>
+                            <h2>Токены</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Level up -->
+                <section class="tab-page" id="tab-levelup">
+                    <div class="card">
+                        <div class="card-header"><h3>Level up</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-arrow-up-right-dots"></i>
+                            <h2>Level up</h2>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Таблица токенов -->
+                <section class="tab-page" id="tab-tokens-table">
+                    <div class="card">
+                        <div class="card-header"><h3>Таблица</h3></div>
+                        <div class="placeholder">
+                            <i class="fas fa-table"></i>
+                            <h2>Таблица токенов</h2>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Авторизация ---
+        const ROLES = {
+            admin:   { name: 'Администратор',   level: 4, color: '#fbbf24' },
+            chief:   { name: 'Главный куратор', level: 3, color: '#c4b5fd' },
+            curator: { name: 'Куратор',         level: 2, color: '#34d399' },
+            master:  { name: 'Мастер',          level: 1, color: '#a5b4fc' }
+        };
+        const DEFAULT_USERS = [
+            { username: 'admin',   password: 'admin',   role: 'admin' },
+            { username: 'glk',     password: 'glk',     role: 'chief' },
+            { username: 'curator', password: 'curator', role: 'curator' },
+            { username: 'master',  password: 'master',  role: 'master' }
+        ];
+        // Минимальный уровень роли для доступа к вкладке
+        const TAB_ACCESS = {
+            'interview-master': 2,  // Curator+
+            'reatt-masters':    2,  // Curator+
+            'memo-curators':    2,  // Curator+
+            'wheel':            2   // Curator+
+        };
+
+        function loadUsers() {
+            try {
+                const u = JSON.parse(localStorage.getItem('users'));
+                if (Array.isArray(u) && u.length) return u;
+            } catch {}
+            localStorage.setItem('users', JSON.stringify(DEFAULT_USERS));
+            return DEFAULT_USERS.slice();
+        }
+        function getCurrentUser() {
+            try { return JSON.parse(localStorage.getItem('currentUser')); }
+            catch { return null; }
+        }
+        function setCurrentUser(u) {
+            if (u) localStorage.setItem('currentUser', JSON.stringify(u));
+            else localStorage.removeItem('currentUser');
+        }
+        function currentRoleLevel() {
+            const cu = getCurrentUser();
+            return cu && ROLES[cu.role] ? ROLES[cu.role].level : 0;
+        }
+        function canAccess(tab) {
+            return currentRoleLevel() >= (TAB_ACCESS[tab] || 1);
+        }
+
+        function applyRole() {
+            const cu = getCurrentUser();
+            if (!cu) return;
+            const r = ROLES[cu.role] || ROLES.master;
+            const card = document.querySelector('.sidebar-user-card');
+            if (card) {
+                const av = card.querySelector('.avatar-circle');
+                if (av) av.textContent = (cu.username || '?').charAt(0).toUpperCase();
+                const nm = card.querySelector('.u-name');
+                if (nm) nm.textContent = cu.username;
+                const rl = card.querySelector('.u-role');
+                if (rl) {
+                    rl.textContent = r.name;
+                    rl.className = 'u-role role-' + cu.role;
+                }
+            }
+            // Скрываем недоступные вкладки + пустые секции
+            document.querySelectorAll('.nav-link[data-tab]').forEach(link => {
+                const li = link.closest('.nav-item');
+                if (!li) return;
+                li.style.display = canAccess(link.dataset.tab) ? '' : 'none';
+            });
+            document.querySelectorAll('.nav-section').forEach(sec => {
+                const visible = Array.from(sec.querySelectorAll('.nav-item')).some(i => i.style.display !== 'none');
+                sec.style.display = visible ? '' : 'none';
+            });
+            // Если активная вкладка теперь недоступна — переключим на «Главная»
+            const active = document.querySelector('.nav-link.active');
+            if (active && !canAccess(active.dataset.tab) && typeof switchTab === 'function') {
+                switchTab('home');
+            }
+        }
+
+        function showLogin() {
+            document.body.classList.add('auth-locked');
+            const s = document.getElementById('authScreen');
+            if (s) s.classList.add('show');
+            setTimeout(() => {
+                const u = document.getElementById('loginUsername');
+                if (u) u.focus();
+            }, 50);
+        }
+        function hideLogin() {
+            document.body.classList.remove('auth-locked');
+            const s = document.getElementById('authScreen');
+            if (s) s.classList.remove('show');
+            applyRole();
+        }
+
+        loadUsers();
+        if (!getCurrentUser()) showLogin();
+
+        document.getElementById('authForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const u = document.getElementById('loginUsername').value.trim();
+            const p = document.getElementById('loginPassword').value;
+            const err = document.getElementById('authError');
+            const users = loadUsers();
+            const found = users.find(x => x.username === u && x.password === p);
+            if (!found) {
+                err.textContent = 'Неверный логин или пароль';
+                err.classList.add('show');
+                return;
+            }
+            err.classList.remove('show');
+            setCurrentUser({ username: found.username, role: found.role });
+            document.getElementById('loginPassword').value = '';
+            hideLogin();
+        });
+
+        document.getElementById('sidebarLogout').addEventListener('click', () => {
+            if (!confirm('Выйти из аккаунта?')) return;
+            setCurrentUser(null);
+            location.reload();
+        });
+
+        const titles = {
+            'profile': ['Профиль', 'Ваша информация'],
+            'home': ['Главная', 'Ваш состав'],
+            'table': ['Таблица', 'Основная таблица'],
+            'table-masters': ['Таблица для мастеров', 'Таблица мастеров'],
+            'interview-moder': ['Собес на модера', 'Доступно мастерам'],
+            'events': ['Ивенты', 'Управление ивентами'],
+            'giveaways': ['Розыгрыши', 'Розыгрыши и призы'],
+            'warnings': ['Выговоры', 'Дисциплинарные меры'],
+            'wheel': ['Колесо фортуны', 'Испытайте удачу'],
+            'interview-master': ['Собес на мастера', 'Кураторам и выше'],
+            'memo-masters': ['Памятка для мастеров', 'Чек-лист для мастеров'],
+            'memo-curators': ['Памятка для кураторов', 'Гайд для кураторов'],
+            'reatt-masters': ['Переаттестация для мастеров', 'Вопросы для мастеров'],
+            'reatt-moders': ['Переаттестация для модеров', 'Вопросы для модеров'],
+            'reports': ['Отчётность', 'Все отчёты собеседований'],
+            'tokens': ['Токены', 'Учёт токенов'],
+            'levelup': ['Level up', ''],
+            'tokens-table': ['Таблица', '']
+        };
+
+        const links = document.querySelectorAll('.nav-link[data-tab]');
+        const pages = document.querySelectorAll('.tab-page');
+        const sidebar = document.getElementById('mainSidebar');
+        const menuBtn = document.getElementById('mobileMenuBtn');
+
+        function switchTab(tab) {
+            if (typeof canAccess === 'function' && !canAccess(tab)) return;
+            links.forEach(l => l.classList.toggle('active', l.dataset.tab === tab));
+            pages.forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+            const [title, sub] = titles[tab] || ['', ''];
+            document.getElementById('pageTitle').textContent = title;
+            document.getElementById('pageSubtitle').textContent = sub;
+            if (window.innerWidth <= 1024) sidebar.classList.remove('open');
+        }
+
+        links.forEach(l => l.addEventListener('click', () => switchTab(l.dataset.tab)));
+
+        // Применить роль текущего пользователя к UI (после того как switchTab объявлен)
+        if (typeof applyRole === 'function' && getCurrentUser()) applyRole();
+
+        if (menuBtn) {
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('open');
+                const icon = menuBtn.querySelector('i');
+                icon.classList.toggle('fa-bars');
+                icon.classList.toggle('fa-times');
+            });
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 1024 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== menuBtn) {
+                    sidebar.classList.remove('open');
+                    menuBtn.querySelector('i').classList.replace('fa-times', 'fa-bars');
+                }
+            });
+        }
+
+        // --- Собес на модера: вопросы ---
+        const interviewData = {
+            1: [
+                { q: 'Что будете делать, если человек утверждает о неполноценности этнической группы?', a: 'пред / бан' },
+                { q: 'Что будете делать, если человек сидит с вебкой и бьёт ни с того ни с сего по столу, разбивая вещи?', a: 'пред / бан (шок-контент)' },
+                { q: 'Чем отличается Community Guidelines от Terms of Service?', a: 'ToS — это соглашение между пользователем и Discord.\nGD — это руководство по безопасному и корректному поведению в Discord.' },
+                { q: 'Человек заходит в войс с девушками и говорит: «Пизде слово не давали».', a: 'пред / мут (банворды)' },
+                { q: 'Человек запивает лекарства алкоголем на вебке.', a: 'пред / бан (нанесение вреда здоровью)' },
+                { q: 'Человек стримит казино, ваши действия?', a: 'Если на реальные деньги или материальные ценности — пред / бан.\nЕсли на виртуальные монеты (не деньги) — ничего, но пользователю должно быть 18+ и без рекламы на демке.' },
+                { q: 'Человек в войсе начинает демонстрировать кракен-ссылку.', a: 'пред / бан — такие ссылки запрещены.' },
+                { q: 'Человек заходит в войс и говорит, что он из Северной Кореи.', a: 'бан — страна эмбарго.' },
+                { q: 'У человека ник 4/20 и он говорит, что это час, когда он родился, и откровенно смеётся.', a: 'пред / бан (завуалированная запретка — день рождения Гитлера)' },
+                { q: 'Что будете делать, если человек в не-мод-войсе включает порнуху?', a: 'пред / бан — запрещено такое стримить (порнографический контент).' }
+            ],
+            2: [
+                { q: 'Человек заходит в войс и стримит игру 16+, на вопрос сколько ему лет отвечает 15. Ваши действия?', a: 'пред / бан' },
+                { q: 'Человек заходит в войс и в шутку говорит, что ему 12 лет. Ваши действия?', a: 'бан на год (по GD запрещено даже в шутку говорить, что тебе 12 лет).' },
+                { q: 'Человек демонстрирует гифки с непонятными жидкостями и человеческими выделениями. Ваши действия?', a: 'пред / бан — тошнотворный контент.' },
+                { q: 'Человек заходит в войс и говорит, что его роль стоит 1488 монет. Ваши действия?', a: 'пред / бан' },
+                { q: 'Человек курит косяк на вебке, но не говорит, что там. Ваши действия?', a: 'Ничего, если не пропагандирует и не призывает к действию.' },
+                { q: 'Человек просит купить у него какую-то услугу в войсе. Ваши действия?', a: 'пред / бан — коммерческая деятельность запрещена без согласования стафф-администрации.' },
+                { q: 'Человек заходит в войс без стафф-ролей (или спонсорок) и на демке читает чаты стаффа. Ваши действия?', a: 'Бан — модификации Discord запрещены.' },
+                { q: 'Человек на демке показывает новости и кадры с аварии, но крови там нет. Ваши действия?', a: 'пред / бан — шок-контент.' },
+                { q: 'Человек заходит в войс, называет участника по имени и начинает имитировать звуки выстрелов, крики и плач.', a: 'пред / бан — расценивается как угроза и запугивание.' },
+                { q: 'Человек заходит в войс, на фоне слышно пылесос, его просят выключить микрофон или включить шумоподавление, но он не слушает. Ваши действия?', a: 'пред / мут — правило 3.1.' }
+            ],
+            3: [
+                { q: 'Человек отправляет фото девушки с интернета, где она фотографируется в нижнем белье перед зеркалом. Ваши действия?', a: 'Ничего.' },
+                { q: 'Человек сидит на вебке и нюхает клей, говоря, что он приятно пахнет. Ваши действия?', a: 'пред / бан — нанесение вреда здоровью.' },
+                { q: 'Человек в мод-руме на вебку начинает запивать лекарственные препараты алкоголем. Ваши действия?', a: 'пред / бан — вред здоровью.' },
+                { q: 'Человек на вебке оскорбляет и бьёт своего питомца за то, что тот сходил в туалет на кровать. Ваши действия?', a: 'пред / бан — за нанесение вреда здоровью питомца.' },
+                { q: 'Пользователь заходит в войс, но у него очень громкий микрофон. Ваши действия?', a: 'пред / мут — правило 3.1.' },
+                { q: 'В голосовой канал заходит новый участник, молчит 5 минут, потом резко выходит. Никаких других действий. Ваши действия?', a: 'Ничего.' },
+                { q: 'Человек сидит в войсе, стримит доту и показывает функции snitch-changer-а. Ваши действия?', a: 'пред / бан — запрещены читы и модификации.' },
+                { q: 'Человек в войсе включает вебку и рассказывает, как его побили, показывая кровь на футболке. Ваши действия?', a: 'пред / бан — тошнотворный контент.' },
+                { q: 'Человек заходит к девушке, которой 16 лет, и начинает предлагать «оплодотвориться», не реагируя на её предупреждения. Ваши действия?', a: 'пред / бан.' },
+                { q: 'Человек говорит, что ветка модеров плохая, оскорбляя её. Ваши действия?', a: 'пред / бан — за деструктив.' }
+            ]
+        };
+
+        function renderQuestionsTo(containerId, items) {
+            const list = document.getElementById(containerId);
+            if (!list) return;
+            list.innerHTML = items.map((it, i) => `
+                <div class="q-card">
+                    <div class="q-num">${i + 1}</div>
+                    <div class="q-body">
+                        <div class="q-text">${it.q}</div>
+                        <button class="q-toggle" type="button">
+                            <i class="fas fa-eye"></i> <span>Показать ответ</span>
+                        </button>
+                        <div class="q-answer">${it.a}</div>
+                    </div>
+                </div>
+            `).join('');
+            list.querySelectorAll('.q-toggle').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const card = btn.closest('.q-card');
+                    const revealed = card.classList.toggle('revealed');
+                    btn.querySelector('span').textContent = revealed ? 'Скрыть ответ' : 'Показать ответ';
+                    btn.querySelector('i').className = revealed ? 'fas fa-eye-slash' : 'fas fa-eye';
+                });
+            });
+        }
+
+        // --- Универсальный собес (поля + оценки + отчёты) ---
+        const RATING_POINTS = { '+': 1, '+-': 0.5, '-': 0 };
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function formatDate(d) {
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${dd}.${mm}.${d.getFullYear()}`;
+        }
+
+        function createInterview(cfg) {
+            let currentVariant = cfg.hasVariants ? '1' : 'single';
+
+            const getItems = () => cfg.hasVariants ? (cfg.data[currentVariant] || []) : cfg.data;
+            const loadRatings = () => {
+                try { return JSON.parse(localStorage.getItem(cfg.ratingStorage + currentVariant) || '{}'); }
+                catch { return {}; }
+            };
+            const saveRatings = r => localStorage.setItem(cfg.ratingStorage + currentVariant, JSON.stringify(r));
+            const loadReports = () => {
+                try { return JSON.parse(localStorage.getItem(cfg.reportsStorage) || '[]'); }
+                catch { return []; }
+            };
+            const saveReports = arr => localStorage.setItem(cfg.reportsStorage, JSON.stringify(arr));
+
+            function updateScore() {
+                const r = loadRatings();
+                let pts = 0, rated = 0;
+                Object.values(r).forEach(v => { if (v) { pts += RATING_POINTS[v]; rated++; } });
+                const el = document.getElementById(cfg.scoreId);
+                if (!el) return;
+                el.textContent = (pts % 1 === 0 ? pts : pts.toFixed(1)) + ' / ' + cfg.maxScore;
+                el.classList.remove('pass', 'fail', 'partial');
+                if (pts >= cfg.passingScore) el.classList.add('pass');
+                else if (rated >= cfg.maxScore) el.classList.add('fail');
+                else if (rated > 0) el.classList.add('partial');
+            }
+
+            function render(variant) {
+                if (variant !== undefined) currentVariant = String(variant);
+                const list = document.getElementById(cfg.listId);
+                if (!list) return;
+                const items = getItems();
+                const ratings = loadRatings();
+                list.innerHTML = items.map((it, i) => {
+                    const r = ratings[i];
+                    const ratedCls = r ? ' rated rated-' + (r === '+' ? 'plus' : r === '+-' ? 'mid' : 'minus') : '';
+                    return `
+                    <div class="q-card${ratedCls}" data-idx="${i}">
+                        <div class="q-num">${i + 1}</div>
+                        <div class="q-body">
+                            <div class="q-text">${it.q}</div>
+                            <div class="q-actions">
+                                <button class="q-toggle" type="button">
+                                    <i class="fas fa-eye"></i> <span>Показать ответ</span>
+                                </button>
+                                <div class="q-rate">
+                                    <button class="r-plus${r === '+' ? ' active' : ''}" data-r="+" title="Верный ответ" type="button">+</button>
+                                    <button class="r-mid${r === '+-' ? ' active' : ''}" data-r="+-" title="Частично" type="button">+−</button>
+                                    <button class="r-minus${r === '-' ? ' active' : ''}" data-r="-" title="Неверный" type="button">−</button>
+                                </div>
+                            </div>
+                            <div class="q-answer">${it.a}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                list.querySelectorAll('.q-toggle').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const card = btn.closest('.q-card');
+                        const revealed = card.classList.toggle('revealed');
+                        btn.querySelector('span').textContent = revealed ? 'Скрыть ответ' : 'Показать ответ';
+                        btn.querySelector('i').className = revealed ? 'fas fa-eye-slash' : 'fas fa-eye';
+                    });
+                });
+
+                list.querySelectorAll('.q-rate button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const card = btn.closest('.q-card');
+                        const idx = card.dataset.idx;
+                        const r = btn.dataset.r;
+                        const all = loadRatings();
+                        all[idx] = all[idx] === r ? null : r;
+                        if (!all[idx]) delete all[idx];
+                        saveRatings(all);
+                        card.querySelectorAll('.q-rate button').forEach(b => b.classList.toggle('active', b.dataset.r === all[idx]));
+                        card.classList.remove('rated', 'rated-plus', 'rated-mid', 'rated-minus');
+                        if (all[idx]) {
+                            card.classList.add('rated');
+                            card.classList.add('rated-' + (all[idx] === '+' ? 'plus' : all[idx] === '+-' ? 'mid' : 'minus'));
+                        }
+                        updateScore();
+                    });
+                });
+
+                updateScore();
+            }
+
+            function renderReports() {
+                const reports = loadReports();
+                const list = document.getElementById(cfg.reportsListId);
+                const count = document.getElementById(cfg.reportsCountId);
+                if (!list) return;
+                if (count) count.textContent = reports.length;
+                if (reports.length === 0) {
+                    list.innerHTML = '<div class="reports-empty">Пока нет отправленных отчётов.</div>';
+                    return;
+                }
+                list.innerHTML = reports.slice().reverse().map((r, idx) => {
+                    const realIdx = reports.length - 1 - idx;
+                    const passed = r.score >= cfg.passingScore;
+                    return `
+                        <div class="report-card ${passed ? 'r-passed' : 'r-failed'}">
+                            <div class="report-row">
+                                <div class="report-main">
+                                    <div class="report-nick">${escapeHtml(r.nick || '—')}</div>
+                                    <div class="report-id">ID: ${escapeHtml(r.id || '—')}</div>
+                                </div>
+                                <div class="report-score ${passed ? 'pass' : 'fail'}">
+                                    ${r.score} / ${cfg.maxScore}
+                                    <span class="report-verdict">${passed ? 'Сдал' : 'Не сдал'}</span>
+                                </div>
+                                <button class="report-del" data-i="${realIdx}" title="Удалить"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="report-info">
+                                <span><i class="fas fa-calendar"></i> ${r.date}</span>
+                                <span><i class="fas fa-user-shield"></i> ${escapeHtml(r.reviewer || '—')}</span>
+                                ${cfg.hasVariants ? `<span><i class="fas fa-layer-group"></i> Вариант ${r.variant}</span>` : ''}
+                            </div>
+                        </div>`;
+                }).join('');
+                list.querySelectorAll('.report-del').forEach(b => {
+                    b.addEventListener('click', () => {
+                        if (!confirm('Удалить отчёт?')) return;
+                        const all = loadReports();
+                        all.splice(+b.dataset.i, 1);
+                        saveReports(all);
+                        renderReports();
+                        if (typeof renderAllReports === 'function') renderAllReports();
+                    });
+                });
+            }
+
+            // Поля кандидата — persistence
+            [cfg.nickId, cfg.idId, cfg.reviewerId].forEach(elId => {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                el.value = localStorage.getItem(elId) || '';
+                el.addEventListener('input', () => localStorage.setItem(elId, el.value));
+            });
+
+            // Сброс оценок
+            const resetBtn = document.getElementById(cfg.resetId);
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    if (!confirm('Сбросить все оценки?')) return;
+                    localStorage.removeItem(cfg.ratingStorage + currentVariant);
+                    render();
+                });
+            }
+
+            // Отправка отчёта
+            const submitBtn = document.getElementById(cfg.submitId);
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => {
+                    const nick = document.getElementById(cfg.nickId).value.trim();
+                    const id = document.getElementById(cfg.idId).value.trim();
+                    const reviewer = document.getElementById(cfg.reviewerId).value.trim();
+                    if (!nick || !id) {
+                        alert('Заполните «Коренной ник» и «ID» кандидата.');
+                        return;
+                    }
+                    const ratings = loadRatings();
+                    let pts = 0;
+                    Object.values(ratings).forEach(v => { if (v) pts += RATING_POINTS[v]; });
+                    const score = pts % 1 === 0 ? pts : +pts.toFixed(1);
+                    const now = new Date();
+                    const report = {
+                        nick, id, reviewer,
+                        variant: currentVariant,
+                        score, date: formatDate(now),
+                        ts: now.getTime(),
+                        ratings: { ...ratings }
+                    };
+                    const all = loadReports();
+                    all.push(report);
+                    saveReports(all);
+                    renderReports();
+                    if (typeof renderAllReports === 'function') renderAllReports();
+                    [cfg.nickId, cfg.idId].forEach(k => {
+                        const el = document.getElementById(k);
+                        el.value = '';
+                        localStorage.removeItem(k);
+                    });
+                    localStorage.removeItem(cfg.ratingStorage + currentVariant);
+                    render();
+                    document.getElementById(cfg.nickId).focus();
+                });
+            }
+
+            return { render, renderReports, getVariant: () => currentVariant };
+        }
+
+        // Собес на модера
+        const moderInterview = createInterview({
+            data: interviewData, hasVariants: true,
+            maxScore: 10, passingScore: 7,
+            listId: 'questionsList', scoreId: 'candScore',
+            nickId: 'candNick', idId: 'candId', reviewerId: 'candReviewer',
+            submitId: 'submitReport', resetId: 'resetRatings',
+            reportsListId: 'reportsList', reportsCountId: 'reportsCount',
+            ratingStorage: 'rate_v', reportsStorage: 'moder_reports'
+        });
+        document.querySelectorAll('.variant-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.variant-btn').forEach(b => b.classList.toggle('active', b === btn));
+                moderInterview.render(btn.dataset.variant);
+            });
+        });
+        moderInterview.render('1');
+        moderInterview.renderReports();
+
+        // --- Переаттестация для модеров ---
+        const reattModersData = [
+            { q: 'Человек на вебке бегает, прыгает по всей комнате и бьётся головой об подушку, выкрикивая непонятные звуки. Ваши действия?', a: 'Неадекватное поведение — правило 3.2. Пред / мут.' },
+            { q: 'Назови и охарактеризуй 3 вида запрещённого контента.', a: 'Шок-контент, порно-контент (одобряем), тошнотворный контент.' },
+            { q: 'У пользователя в профиле ссылка на его ТГК. Ваши действия?', a: 'Ничего.' },
+            { q: 'Человек в мод-руме сидит с вебкой и едет за рулём, разговаривая с другими пользователями.', a: 'Пред / бан — опасное вождение.' },
+            { q: 'Один из пользователей усомнился, что его собеседнику есть 13 лет, и просит показать документы. Ваши действия?', a: 'Запрос документов — деанон. Пред, при настойчивости — вплоть до бана.' },
+            { q: 'В мод-руме человек представляется Артёмом, через пару минут — Алиной, использует войсмод, изменяя голос на женский, и убеждает всех, что он девушка. Ваши действия?', a: 'Пред / бан — ввод в заблуждение.' },
+            { q: 'В мод-руме пользователь взял курительную трубку, забил её табаком и зажёг. Ваши действия?', a: 'Ничего.' },
+            { q: 'Человек в мод-руме рассказывает, как абузить правила сервера и избегать наказаний. Ваши действия?', a: 'Пред / бан — правило 1.2.' },
+            { q: 'Пользователи завуалированно кидают банворды в ходе обсуждений. Ваши действия?', a: 'Пред / мут — банворды.' },
+            { q: 'Человек стримит фильм в руме на троих для себя и друга — проскакивают сцены с малым количеством крови и насилия. Ваши действия?', a: 'Пред / бан — шок-контент. Можно попросить перейти в руму 1×1 или приватку.' },
+            { q: 'Человек на вебке включает подсветку в комнате, которая динамично резко загорается под музыку на фоне. Ваши действия?', a: 'Пред / бан — шок-контент (эпилепсия).' },
+            { q: 'В мод-руму зашёл человек с ником «Я люблю Милф». Что будете делать?', a: 'Ничего.' },
+            { q: 'В руму заходят 3 человека. Один говорит «Смотри, что умею» — после этого у всех начинает лагать Discord, повышается пинг, выкидывает с румы. Ваши действия?', a: 'Бан — правило 1.2.' },
+            { q: 'Человек на вебке показывает, как поджигает мелкие предметы. Ваши действия?', a: 'Шок-контент — пред / бан.' },
+            { q: 'Зашёл человек с ником «Вызывайте 911». Ваши действия?', a: 'Ничего.' },
+            { q: 'Пользователь решил поиграть в казино на демонстрации. Ваши действия?', a: 'Можно, если пользователю 18+, игра не на материальные ценности / деньги и без рекламы. Иначе — пред / бан.' },
+            { q: 'У пользователя в «Обо мне» ссылка на его Twitch-аккаунт без спойлера. Ваши действия?', a: 'Ничего.' },
+            { q: 'Какие правила действуют в личных румах и какие — в немод-румах?', a: 'Немод-румы: 1.2, 2.2, 2.8, Политика сервера + ToS + GD.\nЛичные / приватные: 1.2, 2.2, 2.8, ToS + GD.' },
+            { q: 'Человек на вебку показывает бездомного и смеётся над ним. Ваши действия?', a: 'Если просто смеётся — ничего. Если унижает — лёгкий оск, правило 3.2.' },
+            { q: 'В мод-руме один пользователь просит другого перейти по ссылке из ЛС — там оказывается ссылка на его сервер в Discord. Первый кидает жалобу на второго за рекламу. Ваши действия?', a: 'Бан за рекламу.' }
+        ];
+
+        // --- Собес на мастера ---
+        const mastersInterviewData = [
+            { q: 'Что такое фишинг и SCAM? В чём их сходство и различия?', a: 'Фишинг — интернет-мошенничество с целью получить пароль и логин пользователя.\nSCAM — интернет-мошенничество с целью обогащения преступника.' },
+            { q: 'Зашёл человек и включил гимн через soundpad. Ваши действия?', a: 'Пред / мут — правила 3.1 + 1.9.' },
+            { q: 'Пользователь в мод-руме стримит официальные новости BBC, где ведущий рассказывает о террористических актах в Крыму. Ваши действия?', a: 'Шок-контент — пред / бан.' },
+            { q: 'Человек в мод-руме говорит, что ветка Саппортов лучше ветки Модераторов: там дружнее коллектив и интереснее, лучше идти в саппорты. Ваши действия?', a: 'Пред / мут — правило 1.7.' },
+            { q: 'Чем отличается терроризм от экстремизма? Какое понятие шире и включает в себя второе?', a: 'Экстремизм — широкое понятие: радикальные взгляды и действия, направленные на подрыв основ государственного строя, нарушение прав и свобод граждан, насильственное изменение власти, разжигание ненависти и вражды.\nТерроризм — более узкое, одно из проявлений экстремизма. Использование насилия, угроз и устрашения для достижения политических, религиозных или идеологических целей. Основной инструмент — акты насилия (взрывы, захваты заложников, убийства), направленные на создание страха среди населения.' },
+            { q: 'Тебе скидывают в личные сообщения фото голой девушки, которая согласна на то, чтобы ты её увидел. Твои действия?', a: 'Ничего.' },
+            { q: 'Человек говорит в руме, что его роль стоит 514 монет. Ваши действия?', a: 'Ничего.' },
+            { q: 'Человек играет в игру с ограничением 16+.', a: 'Ничего.' },
+            { q: 'Человек подаёт жалобы на пользователя, но не дожидается начала разбора и подаёт ещё пару жалоб на него же. Ваши действия?', a: 'Правило 2.6 — бан до 30 дней.' },
+            { q: 'Пользователь говорит, что не видит ничего плохого в доксинге и иногда сам прибегал к подобному. Ваши действия?', a: 'Бан.' },
+            { q: 'Человек говорит, что земля плоская.', a: 'Ввод в заблуждение — пред / бан.' },
+            { q: 'Человек использует на демонстрации экрана скинчейнджер в Доте. Ваши действия?', a: 'Пред / бан — по GD запрещены читы и модификации игр не от официальных источников.' },
+            { q: 'Человек зашёл в руму и сказал, чтобы девочка на втором слоте помолчала, потому что ему не нравится её голос — «потому что она женщина». Ваши действия?', a: 'Пред / мут — сексизм.' },
+            { q: 'Человек запрашивает у другого пользователя фотографии, нормализующие сексуализированное насилие над детьми, но другой отказывается скидывать. Ваши действия и почему?', a: 'Нельзя запрашивать. Пред / бан.' },
+            { q: 'К какой классификации относится утверждение о неполноценности этнической группы?', a: 'Мягкий язык вражды.' }
+        ];
+
+        // Собес на мастера
+        const masterInterview = createInterview({
+            data: mastersInterviewData, hasVariants: false,
+            maxScore: 15, passingScore: 11,
+            listId: 'mastersInterviewList', scoreId: 'mCandScore',
+            nickId: 'mCandNick', idId: 'mCandId', reviewerId: 'mCandReviewer',
+            submitId: 'mSubmitReport', resetId: 'mResetRatings',
+            reportsListId: 'mReportsList', reportsCountId: 'mReportsCount',
+            ratingStorage: 'm_rate_', reportsStorage: 'master_reports'
+        });
+        masterInterview.render();
+        masterInterview.renderReports();
+
+        // Переаттестация для модеров — просто список с раскрытием ответов
+        renderQuestionsTo('modersReattList', reattModersData);
+
+        // --- Колесо фортуны ---
+        const DEFAULT_WHEEL = [
+            { name: 'Вариант 1', weight: 20, color: '#ff3b3b' },
+            { name: 'Вариант 2', weight: 20, color: '#8b5cf6' },
+            { name: 'Вариант 3', weight: 20, color: '#ec4899' },
+            { name: 'Вариант 4', weight: 20, color: '#f59e0b' },
+            { name: 'Вариант 5', weight: 20, color: '#10b981' }
+        ];
+        let wheelOptions = [];
+        let wheelSpeed = 3;
+        let wheelStartAngle = 0;
+        let wheelAnimId = null;
+
+        const wheelCanvas = document.getElementById('wheel-canvas');
+        const wheelCtx = wheelCanvas ? wheelCanvas.getContext('2d') : null;
+        const wheelOptsList = document.getElementById('options-list');
+        const winnerBox = document.getElementById('winner-box');
+        const winnerNameEl = document.getElementById('winner-name');
+        const spinBtn = document.getElementById('spin-button');
+
+        function loadWheel() {
+            try {
+                const data = JSON.parse(localStorage.getItem('wheel_options'));
+                wheelOptions = Array.isArray(data) && data.length ? data : JSON.parse(JSON.stringify(DEFAULT_WHEEL));
+            } catch { wheelOptions = JSON.parse(JSON.stringify(DEFAULT_WHEEL)); }
+            wheelSpeed = +localStorage.getItem('wheel_speed') || 3;
+            const sel = document.getElementById('wheelSpeed');
+            if (sel) sel.value = wheelSpeed;
+        }
+        function saveWheel() { localStorage.setItem('wheel_options', JSON.stringify(wheelOptions)); }
+
+        function drawWheel() {
+            if (!wheelCtx) return;
+            wheelCtx.clearRect(0, 0, 500, 500);
+            const r = 230, cx = 250, cy = 250;
+            const n = wheelOptions.length;
+            if (n === 0) return;
+            const arc = (Math.PI * 2) / n;
+            for (let i = 0; i < n; i++) {
+                const a = wheelStartAngle + i * arc;
+                wheelCtx.fillStyle = wheelOptions[i].color;
+                wheelCtx.beginPath();
+                wheelCtx.moveTo(cx, cy);
+                wheelCtx.arc(cx, cy, r, a, a + arc);
+                wheelCtx.lineTo(cx, cy);
+                wheelCtx.fill();
+
+                wheelCtx.save();
+                wheelCtx.fillStyle = '#fff';
+                wheelCtx.translate(cx + Math.cos(a + arc/2) * r * 0.65, cy + Math.sin(a + arc/2) * r * 0.65);
+                wheelCtx.rotate(a + arc/2 + Math.PI/2);
+                wheelCtx.font = "bold 14px 'Space Grotesk', sans-serif";
+                wheelCtx.shadowColor = 'rgba(0,0,0,0.5)';
+                wheelCtx.shadowBlur = 4;
+                let name = wheelOptions[i].name || '';
+                if (name.length > 15) name = name.slice(0, 13) + '..';
+                wheelCtx.fillText(name, -wheelCtx.measureText(name).width / 2, 0);
+                wheelCtx.restore();
+            }
+            wheelCtx.beginPath();
+            wheelCtx.arc(cx, cy, 45, 0, Math.PI * 2);
+            wheelCtx.fillStyle = '#1a0505';
+            wheelCtx.fill();
+            wheelCtx.strokeStyle = 'rgba(255,255,255,0.18)';
+            wheelCtx.lineWidth = 6;
+            wheelCtx.stroke();
+            wheelCtx.fillStyle = '#fff';
+            wheelCtx.font = "bold 11px 'JetBrains Mono', monospace";
+            wheelCtx.shadowBlur = 0;
+            const t = 'FUTURAMA';
+            wheelCtx.fillText(t, cx - wheelCtx.measureText(t).width / 2, cy + 4);
+        }
+
+        function renderWheelOptions() {
+            if (!wheelOptsList) return;
+            wheelOptsList.innerHTML = wheelOptions.map((opt, i) => `
+                <div class="wheel-opt" data-i="${i}">
+                    <input type="color" class="wo-color" value="${opt.color}">
+                    <input type="text" class="wo-name" value="${escapeHtml(opt.name)}" placeholder="Название">
+                    <input type="number" class="wo-weight" value="${opt.weight}" min="1" max="999" title="Вес / шанс">
+                    <button class="wo-del" type="button" title="Удалить"><i class="fas fa-times"></i></button>
+                </div>`).join('');
+            wheelOptsList.querySelectorAll('.wheel-opt').forEach(row => {
+                const i = +row.dataset.i;
+                row.querySelector('.wo-color').addEventListener('input', e => { wheelOptions[i].color = e.target.value; saveWheel(); drawWheel(); });
+                row.querySelector('.wo-name').addEventListener('input', e => { wheelOptions[i].name = e.target.value; saveWheel(); drawWheel(); });
+                row.querySelector('.wo-weight').addEventListener('input', e => { wheelOptions[i].weight = Math.max(1, +e.target.value || 1); saveWheel(); });
+                row.querySelector('.wo-del').addEventListener('click', () => { wheelOptions.splice(i, 1); saveWheel(); renderWheelOptions(); drawWheel(); });
+            });
+        }
+
+        function spinWheel() {
+            if (!wheelCanvas || wheelOptions.length === 0) return;
+            if (winnerBox) winnerBox.classList.remove('show');
+            spinBtn.disabled = true;
+
+            let totalW = 0;
+            wheelOptions.forEach(o => totalW += +o.weight);
+            const rnd = Math.random() * totalW;
+            let target = 0, cum = 0;
+            for (let i = 0; i < wheelOptions.length; i++) {
+                cum += +wheelOptions[i].weight;
+                if (rnd <= cum) { target = i; break; }
+            }
+            const arc = (Math.PI * 2) / wheelOptions.length;
+
+            let duration, rotations;
+            if (wheelSpeed === 1)      { duration = 10000; rotations = 4; }
+            else if (wheelSpeed === 2) { duration = 8000;  rotations = 5; }
+            else if (wheelSpeed === 3) { duration = 6500;  rotations = 6; }
+            else if (wheelSpeed === 4) { duration = 4000;  rotations = 8; }
+            else                       { duration = 2000;  rotations = 10; }
+
+            const targetAng = 1.5 * Math.PI - (target * arc + arc/2) + (Math.PI * 2 * rotations);
+            const t0 = performance.now();
+            const a0 = wheelStartAngle % (Math.PI * 2);
+
+            function anim(now) {
+                const p = Math.min((now - t0) / duration, 1);
+                const ease = 1 - Math.pow(1 - p, 3);
+                wheelStartAngle = a0 + ease * (targetAng - a0);
+                drawWheel();
+                if (p < 1) wheelAnimId = requestAnimationFrame(anim);
+                else {
+                    cancelAnimationFrame(wheelAnimId);
+                    const win = wheelOptions[target];
+                    if (winnerNameEl) winnerNameEl.textContent = win.name;
+                    if (winnerBox) winnerBox.classList.add('show');
+                    spinBtn.disabled = false;
+                    if (typeof confetti === 'function') {
+                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 },
+                            colors: ['#ff3b3b', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'] });
+                    }
+                }
+            }
+            wheelAnimId = requestAnimationFrame(anim);
+        }
+
+        if (wheelCanvas) {
+            loadWheel();
+            renderWheelOptions();
+            drawWheel();
+            spinBtn.addEventListener('click', spinWheel);
+            document.getElementById('wheelAddBtn').addEventListener('click', () => {
+                const palette = ['#ff3b3b', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#a3e635'];
+                wheelOptions.push({ name: 'Новый вариант', weight: 20, color: palette[wheelOptions.length % palette.length] });
+                saveWheel(); renderWheelOptions(); drawWheel();
+            });
+            document.getElementById('wheelResetBtn').addEventListener('click', () => {
+                if (!confirm('Сбросить варианты к значениям по умолчанию?')) return;
+                wheelOptions = JSON.parse(JSON.stringify(DEFAULT_WHEEL));
+                saveWheel(); renderWheelOptions(); drawWheel();
+            });
+            document.getElementById('wheelSpeed').addEventListener('change', e => {
+                wheelSpeed = +e.target.value;
+                localStorage.setItem('wheel_speed', wheelSpeed);
+            });
+        }
+
+        // --- Общая отчётность (агрегатор обоих собесов) ---
+        const REPORT_SOURCES = [
+            { key: 'moder_reports',  type: 'moder',  label: 'Собес на модера',  maxScore: 10, pass: 7,  hasVariants: true  },
+            { key: 'master_reports', type: 'master', label: 'Собес на мастера', maxScore: 15, pass: 11, hasVariants: false }
+        ];
+        let currentReportsFilter = 'all';
+
+        function loadAllReports() {
+            const out = [];
+            REPORT_SOURCES.forEach(src => {
+                let arr = [];
+                try { arr = JSON.parse(localStorage.getItem(src.key) || '[]'); } catch { arr = []; }
+                arr.forEach((r, i) => out.push({ ...r, _src: src, _idx: i }));
+            });
+            return out.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        }
+
+        function renderAllReports() {
+            const list = document.getElementById('allReportsList');
+            const count = document.getElementById('allReportsCount');
+            if (!list) return;
+            const all = loadAllReports();
+            const shown = currentReportsFilter === 'all'
+                ? all
+                : all.filter(r => r._src.type === currentReportsFilter);
+            if (count) count.textContent = shown.length;
+            if (shown.length === 0) {
+                list.innerHTML = '<div class="reports-empty">Отчётов пока нет.</div>';
+                return;
+            }
+            list.innerHTML = shown.map(r => {
+                const passed = r.score >= r._src.pass;
+                return `
+                    <div class="report-card ${passed ? 'r-passed' : 'r-failed'}">
+                        <div class="report-row">
+                            <div class="report-main">
+                                <div class="report-nick">
+                                    ${escapeHtml(r.nick || '—')}
+                                    <span class="report-type rt-${r._src.type}">${r._src.label}</span>
+                                </div>
+                                <div class="report-id">ID: ${escapeHtml(r.id || '—')}</div>
+                            </div>
+                            <div class="report-score ${passed ? 'pass' : 'fail'}">
+                                ${r.score} / ${r._src.maxScore}
+                                <span class="report-verdict">${passed ? 'Сдал' : 'Не сдал'}</span>
+                            </div>
+                            <button class="report-del" data-src="${r._src.key}" data-i="${r._idx}" title="Удалить"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="report-info">
+                            <span><i class="fas fa-calendar"></i> ${r.date}</span>
+                            <span><i class="fas fa-user-shield"></i> ${escapeHtml(r.reviewer || '—')}</span>
+                            ${r._src.hasVariants ? `<span><i class="fas fa-layer-group"></i> Вариант ${r.variant}</span>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            list.querySelectorAll('.report-del').forEach(b => {
+                b.addEventListener('click', () => {
+                    if (!confirm('Удалить отчёт?')) return;
+                    const srcKey = b.dataset.src;
+                    const idx = +b.dataset.i;
+                    let arr = [];
+                    try { arr = JSON.parse(localStorage.getItem(srcKey) || '[]'); } catch { arr = []; }
+                    arr.splice(idx, 1);
+                    localStorage.setItem(srcKey, JSON.stringify(arr));
+                    renderAllReports();
+                    // Обновим локальные истории
+                    if (typeof moderInterview === 'object') moderInterview.renderReports();
+                    if (typeof masterInterview === 'object') masterInterview.renderReports();
+                });
+            });
+        }
+
+        document.querySelectorAll('#reportsFilter .rf-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentReportsFilter = btn.dataset.filter;
+                document.querySelectorAll('#reportsFilter .rf-btn').forEach(b => b.classList.toggle('active', b === btn));
+                renderAllReports();
+            });
+        });
+
+        renderAllReports();
+
+    </script>
+</body>
+</html>

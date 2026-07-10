@@ -1,0 +1,18 @@
+users.json
+app_config.php
+.env
+node_modules/
+*.log
+.DS_Store
+
+# Рантайм-данные — генерируются ботом/сайтом на лету, содержат реальные
+# Discord ID и личную информацию людей. Не нужны в публичном репозитории.
+warnings.json
+roster.json
+moderators.json
+events.json
+levelup.json
+
+# Локальный рантайм Node.js и старый бэкап-снимок — не часть исходников
+node20/
+_backup_1783421438/
