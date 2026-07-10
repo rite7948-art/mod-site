@@ -1159,11 +1159,13 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 });
             }
 
-            // Поля кандидата — persistence
+            // Поля кандидата — persistence. «Проверяющий» по умолчанию — текущий
+            // пользователь (можно вручную поменять, если собес ведёт не он).
             [cfg.nickId, cfg.idId, cfg.reviewerId].forEach(elId => {
                 const el = document.getElementById(elId);
                 if (!el) return;
-                el.value = localStorage.getItem(elId) || '';
+                const fallback = elId === cfg.reviewerId ? (CURRENT_USER.username || '') : '';
+                el.value = localStorage.getItem(elId) || fallback;
                 el.addEventListener('input', () => localStorage.setItem(elId, el.value));
             });
 
