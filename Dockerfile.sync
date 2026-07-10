@@ -1,0 +1,10 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev
+
+COPY sync_service.js check_moder_sync.js fetch_high_staff_avatars.js ./
+
+CMD ["node", "sync_service.js"]

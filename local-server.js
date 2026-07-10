@@ -392,7 +392,7 @@ const server = http.createServer(async (req, res) => {
     // (та же таблица, что сверяется при входе через Discord). Актуальнее, чем
     // /api/roster — та читает Discord-роли с сервера, на котором вышка сейчас
     // фактически не размечена ролями.
-    if (pathname === '/api/high-staff') {
+    if (pathname === '/api/high-staff.php') {
         if (!currentUser(req)) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'unauthorized' }));
@@ -424,7 +424,7 @@ const server = http.createServer(async (req, res) => {
     // Логика 1:1 по образцу футика2 (check_sync.js, запускается по требованию):
     // check_moder_sync.js сам логинится селфботом, читает таблицу и сверяет
     // с ролью Модератора на живых данных — вместо чтения устаревшего снапшота.
-    if (pathname === '/api/sync-moderators' && req.method === 'GET') {
+    if (pathname === '/api/sync-moderators.php' && req.method === 'GET') {
         const user = currentUser(req);
         if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
 

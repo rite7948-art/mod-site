@@ -1,0 +1,210 @@
+// Внутренний Node-сервис только для операций через селфбот (сверка модеров,
+// аватарки High staff). Существует ОТДЕЛЬНО от PHP-сайта, потому что для
+// discord.js-selfbot-v13 нужен Node.js, которого нет в PHP-контейнере.
+// Сайт стучится сюда по приватной сети Railway (не наружу) и проксирует ответ.
+//
+// Логика внутри — 1:1 то же, что в local-server.js (loadHighStaff,
+// loadHighStaffAvatars, check_moder_sync.js), просто вынесено в отдельный
+// процесс со своей простой авторизацией по общему секрету вместо cookie-сессий.
+
+try { require('dotenv').config(); } catch {}
+const http = require('http');
+const path = require('path');
+const { execFile } = require('child_process');
+
+const PORT = process.env.PORT || 8091;
+const ROOT = __dirname;
+const INTERNAL_TOKEN = process.env.INTERNAL_SYNC_TOKEN || '';
+
+const HIGH_STAFF_SHEET_URL = 'https://docs.google.com/spreadsheets/d/15B4JWCgDLFZkzIqFZoQq9HMu0zgznDhKlLant1vddgU/export?format=csv&gid=87425732';
+const HIGH_STAFF_HEADERS = {
+    'administrator': 'admin',
+    'administrative assistant': 'asst',
+    'curator': 'curator',
+    'master': 'master'
+};
+const MOD_SECTION_HEADERS = ['moderators', 'список модераторов'];
+
+function normalizeHomoglyphs(s) {
+    const map = { 'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','Х':'X',
+                  'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','х':'x' };
+    return s.replace(/[А-Яа-я]/g, ch => map[ch] || ch);
+}
+
+function parseCsvRows(csvText) {
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < csvText.length; i++) {
+        const c = csvText[i];
+        if (inQuotes) {
+            if (c === '"') { if (csvText[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+            else field += c;
+        } else {
+            if (c === '"') inQuotes = true;
+            else if (c === ',') { row.push(field); field = ''; }
+            else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+            else if (c === '\r') {}
+            else field += c;
+        }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows;
+}
+
+let highStaffCache = { at: 0, byId: new Map() };
+const HIGH_STAFF_CACHE_MS = 60000;
+
+async function loadHighStaff() {
+    if (highStaffCache.byId.size && Date.now() - highStaffCache.at < HIGH_STAFF_CACHE_MS) {
+        return highStaffCache.byId;
+    }
+    const resp = await fetch(HIGH_STAFF_SHEET_URL);
+    if (!resp.ok) throw new Error('Sheets HTTP ' + resp.status);
+    const text = await resp.text();
+    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+        throw new Error('Таблица закрыта — открой доступ «по ссылке → Читатель».');
+    }
+    const rows = parseCsvRows(text);
+    const byId = new Map();
+    let currentRole = null;
+    for (const r of rows) {
+        if (!r) continue;
+        const cellTexts = r.map(c => normalizeHomoglyphs((c || '').trim()).toLowerCase());
+        if (cellTexts.some(t => MOD_SECTION_HEADERS.includes(t))) break;
+        const headerCell = cellTexts.find(t => HIGH_STAFF_HEADERS[t]);
+        if (headerCell) { currentRole = HIGH_STAFF_HEADERS[headerCell]; continue; }
+        if (!currentRole) continue;
+        const id = (r[2] || '').trim();
+        if (!/^\d{15,22}$/.test(id)) continue;
+        const date = (r[1] || '').trim();
+        const nick = (r[3] || '').trim();
+        const days = (r[4] || '').trim();
+        const name = (r[5] || '').trim();
+        byId.set(id, { nick, name, date, days, role: currentRole });
+    }
+    highStaffCache = { at: Date.now(), byId };
+    return byId;
+}
+
+function execFileP(cmd, args, opts) {
+    return new Promise((resolve, reject) => {
+        execFile(cmd, args, opts, (err, stdout) => {
+            if (err && !stdout) return reject(err);
+            resolve(stdout);
+        });
+    });
+}
+
+let highStaffAvatarCache = { at: 0, byId: {} };
+const HIGH_STAFF_AVATAR_CACHE_MS = 10 * 60 * 1000;
+let highStaffAvatarInFlight = null;
+
+async function loadHighStaffAvatars(ids) {
+    const missing = ids.filter(id => !(id in highStaffAvatarCache.byId));
+    const stale = Date.now() - highStaffAvatarCache.at > HIGH_STAFF_AVATAR_CACHE_MS;
+    if (!missing.length && !stale) return highStaffAvatarCache.byId;
+    if (highStaffAvatarInFlight) return highStaffAvatarInFlight;
+
+    highStaffAvatarInFlight = (async () => {
+        try {
+            const scriptPath = path.join(ROOT, 'fetch_high_staff_avatars.js');
+            const stdout = await execFileP('node', [scriptPath, JSON.stringify(ids)], { cwd: ROOT, timeout: 60000 });
+            const fresh = JSON.parse(stdout.trim().split('\n').pop());
+            highStaffAvatarCache = { at: Date.now(), byId: { ...highStaffAvatarCache.byId, ...fresh } };
+        } catch (e) {
+            console.error('high staff avatars fetch err:', e.message);
+        } finally {
+            highStaffAvatarInFlight = null;
+        }
+        return highStaffAvatarCache.byId;
+    })();
+    return highStaffAvatarInFlight;
+}
+
+function checkAuth(req, res) {
+    if (!INTERNAL_TOKEN || req.headers['x-internal-token'] !== INTERNAL_TOKEN) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'unauthorized' }));
+        return false;
+    }
+    return true;
+}
+
+const server = http.createServer(async (req, res) => {
+    const u = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = u.pathname;
+
+    if (pathname === '/health') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('ok');
+        return;
+    }
+
+    if (pathname === '/sync-moderators' && req.method === 'GET') {
+        if (!checkAuth(req, res)) return;
+        const scriptPath = path.join(ROOT, 'check_moder_sync.js');
+        execFile('node', [scriptPath], { cwd: ROOT, timeout: 120000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
+            if (err && !stdout) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'sync script failed: ' + err.message + (stderr ? ' | ' + stderr.slice(0, 500) : '') }));
+                return;
+            }
+            let result;
+            try {
+                result = JSON.parse(stdout.trim().split('\n').pop());
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'bad sync output: ' + e.message }));
+                return;
+            }
+            res.writeHead(result.error ? 500 : 200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(result));
+        });
+        return;
+    }
+
+    if (pathname === '/high-staff' && req.method === 'GET') {
+        if (!checkAuth(req, res)) return;
+        try {
+            const byId = await loadHighStaff();
+            const roster = { admin: [], asst: [], chief: [], curator: [], master: [] };
+            const allIds = [];
+            for (const [id, info] of byId) {
+                if (!roster[info.role]) continue;
+                allIds.push(id);
+                roster[info.role].push({ id, name: info.name, nick: info.nick, date: info.date, days: info.days });
+            }
+            const avatars = await loadHighStaffAvatars(allIds);
+            for (const role of Object.keys(roster)) {
+                roster[role].forEach(m => { m.avatar = avatars[m.id] || null; });
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ updated_at: new Date(highStaffCache.at).toISOString(), roster }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    // GET /high-staff/avatar?id=... — аватарка одного человека (для шапки/профиля сайта)
+    if (pathname === '/high-staff/avatar' && req.method === 'GET') {
+        if (!checkAuth(req, res)) return;
+        const id = u.searchParams.get('id');
+        if (!id) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'id required' })); return; }
+        try {
+            const avatars = await loadHighStaffAvatars([id]);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ avatar: avatars[id] || null }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'not found' }));
+});
+
+server.listen(PORT, () => console.log(`🔒 Internal sync service on :${PORT}`));

@@ -3,6 +3,25 @@ require_once __DIR__ . '/auth_helper.php';
 require_login();
 $me = current_user();
 $me['role_name'] = role_display_name($me['role']);
+
+// Аватарка из Discord через внутренний sync-сервис (если настроен и успел
+// ответить быстро) — иначе просто буква, как раньше.
+$me['avatar_url'] = null;
+$syncServiceUrl = getenv('SYNC_SERVICE_URL') ?: '';
+$syncToken = getenv('INTERNAL_SYNC_TOKEN') ?: '';
+if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
+    $ch = curl_init(rtrim($syncServiceUrl, '/') . '/high-staff/avatar?id=' . urlencode($me['discord_id']));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Internal-Token: ' . $syncToken]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    $resp = curl_exec($ch);
+    curl_close($ch);
+    if ($resp !== false) {
+        $data = json_decode($resp, true);
+        if (!empty($data['avatar'])) $me['avatar_url'] = $data['avatar'];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -27,7 +46,11 @@ $me['role_name'] = role_display_name($me['role']);
                     <span>Futurama <span>Moderator</span></span>
                 </div>
                 <div class="sidebar-user-card">
-                    <div class="avatar-circle"><?= htmlspecialchars(mb_strtoupper(mb_substr($me['username'] ?: '?', 0, 1))) ?></div>
+                    <?php if ($me['avatar_url']): ?>
+                        <img class="avatar-circle" src="<?= htmlspecialchars($me['avatar_url']) ?>" style="object-fit:cover;" alt="">
+                    <?php else: ?>
+                        <div class="avatar-circle"><?= htmlspecialchars(mb_strtoupper(mb_substr($me['username'] ?: '?', 0, 1))) ?></div>
+                    <?php endif; ?>
                     <div style="overflow:hidden;">
                         <div class="u-name"><?= htmlspecialchars($me['username']) ?></div>
                         <div class="u-role role-<?= htmlspecialchars($me['role']) ?>"><?= htmlspecialchars($me['role_name']) ?></div>
@@ -1622,7 +1645,7 @@ $me['role_name'] = role_display_name($me['role']);
         async function fetchMastersForLevelup() {
             const [sheetMasters, rosterResp] = await Promise.all([
                 fetchMastersFromSheet().catch(() => []),
-                fetch('/api/high-staff').then(r => r.ok ? r.json() : { roster: {} }).catch(() => ({ roster: {} }))
+                fetch('/api/high-staff.php').then(r => r.ok ? r.json() : { roster: {} }).catch(() => ({ roster: {} }))
             ]);
             const allRoster = []
                 .concat(rosterResp.roster?.admin   || [])
@@ -1802,7 +1825,7 @@ $me['role_name'] = role_display_name($me['role']);
                 }, 1000);
 
                 try {
-                    const r = await fetch('/api/sync-moderators');
+                    const r = await fetch('/api/sync-moderators.php');
                     const data = await r.json();
                     clearInterval(tick);
                     if (!r.ok || data.error) {
@@ -1890,7 +1913,7 @@ $me['role_name'] = role_display_name($me['role']);
             const status = document.getElementById('wyshkaStatus');
             const container = document.getElementById('wyshkaContainer');
             try {
-                const res = await fetch('/api/high-staff');
+                const res = await fetch('/api/high-staff.php');
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
@@ -1973,7 +1996,7 @@ $me['role_name'] = role_display_name($me['role']);
         async function loadAvatarFromRoster() {
             if (!CURRENT_USER.discord_id) return null;
             try {
-                const r = await fetch('/api/high-staff');
+                const r = await fetch('/api/high-staff.php');
                 if (!r.ok) return null;
                 const data = await r.json();
                 const all = []
@@ -2245,7 +2268,7 @@ $me['role_name'] = role_display_name($me['role']);
             try {
                 const [res, avatarRes] = await Promise.all([
                     fetch(WARN_CSV_URL),
-                    fetch('/api/high-staff').then(r => r.ok ? r.json() : null).catch(() => null)
+                    fetch('/api/high-staff.php').then(r => r.ok ? r.json() : null).catch(() => null)
                 ]);
                 // Аватарки только кураторов и мастеров — тот же кэш, что и на "Главной",
                 // админов/асистентов сюда специально не берём.
