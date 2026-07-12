@@ -59,9 +59,12 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
 ]));
 curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 $tokenResp = curl_exec($ch);
+$tokenCurlErr = curl_error($ch);
+$tokenHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 $tokenData = json_decode((string)$tokenResp, true);
 if (!isset($tokenData['access_token'])) {
+    error_log('[auth_discord] token exchange failed. curl_error=' . $tokenCurlErr . ' http_code=' . $tokenHttpCode . ' redirect_uri=' . $redirectUri . ' body=' . substr((string)$tokenResp, 0, 500));
     auth_discord_fail('Не удалось получить токен Discord: ' . htmlspecialchars($tokenData['error_description'] ?? $tokenData['error'] ?? 'unknown'));
 }
 
