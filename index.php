@@ -2083,11 +2083,11 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 if (members.length === 0) return '';
                 const cards = members.map(m => {
                     const isMe = CURRENT_USER.discord_id && m.id === CURRENT_USER.discord_id;
-                    const bannerAttr = (isMe && profileState.banner)
-                        ? ` style="background-image:url('${profileState.banner.replace(/'/g, '%27')}');"`
+                    const bannerAttr = m.banner
+                        ? ` style="background-image:url('${String(m.banner).replace(/'/g, '%27')}');"`
                         : '';
                     return `
-                    <div class="staff-card${isMe ? ' is-me' : ''}"${bannerAttr}>
+                    <div class="staff-card${m.banner ? ' has-banner' : ''}${isMe ? ' is-me' : ''}"${bannerAttr}>
                         ${m.avatar
                             ? `<img class="staff-avatar staff-avatar-img" src="${m.avatar}" alt="">`
                             : `<div class="staff-avatar"><i class="fas ${cat.icon}"></i></div>`}
@@ -2139,7 +2139,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state));
         }
 
-        async function loadAvatarFromRoster() {
+        async function fetchMyRosterEntry() {
             if (!CURRENT_USER.discord_id) return null;
             try {
                 const r = await fetch('/api/high-staff.php');
@@ -2151,8 +2151,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     .concat(data.roster?.chief || [])
                     .concat(data.roster?.curator || [])
                     .concat(data.roster?.master || []);
-                const me = all.find(m => m.id === CURRENT_USER.discord_id);
-                return me?.avatar || null;
+                return all.find(m => m.id === CURRENT_USER.discord_id) || null;
             } catch { return null; }
         }
 
@@ -2197,11 +2196,18 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const img = document.getElementById('profAvatar');
             const fallback = fallbackAvatarSVG((CURRENT_USER.username || '?').charAt(0).toUpperCase());
             img.src = fallback;
-            const avatarUrl = await loadAvatarFromRoster();
-            if (avatarUrl) {
+            const me = await fetchMyRosterEntry();
+            if (me && me.avatar) {
                 const test = new Image();
-                test.onload = () => { img.src = avatarUrl; };
-                test.src = avatarUrl;
+                test.onload = () => { img.src = me.avatar; };
+                test.src = me.avatar;
+            }
+            // Баннер хранится на сервере (виден всем), а не только в localStorage
+            // этого браузера — как только пришёл ответ, он становится главным.
+            if (me) {
+                profileState.banner = me.banner || '';
+                profileDraft.banner = profileState.banner;
+                renderProfileHeader();
             }
         }
 
@@ -2343,10 +2349,17 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 setBannerPreview(text.trim());
             }
         });
-        function saveProfileChanges() {
+        async function saveProfileChanges() {
             profileState = { ...profileDraft };
             saveProfileState(profileState);
             document.getElementById('profSaveBar').style.display = 'none';
+            try {
+                await fetch('/api/save-banner.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ banner: profileState.banner || '' })
+                });
+            } catch {}
             loadWyshka();
         }
         function discardProfileChanges() {

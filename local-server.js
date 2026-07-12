@@ -16,6 +16,17 @@ const ROSTER_PATH = process.env.ROSTER_JSON_PATH || path.join(ROOT, 'roster.json
 const WARN_PATH = process.env.WARNINGS_JSON_PATH || path.join(ROOT, 'warnings.json');
 const EVENTS_PATH = process.env.EVENTS_JSON_PATH || path.join(ROOT, 'events.json');
 const LEVELUP_PATH = process.env.LEVELUP_JSON_PATH || path.join(ROOT, 'levelup.json');
+const PROFILES_PATH = process.env.PROFILES_JSON_PATH || path.join(ROOT, 'profiles.json');
+
+function loadProfiles() {
+    try {
+        if (!fs.existsSync(PROFILES_PATH)) return {};
+        return JSON.parse(fs.readFileSync(PROFILES_PATH, 'utf8') || '{}');
+    } catch { return {}; }
+}
+function saveProfilesFile(data) {
+    fs.writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2));
+}
 
 function loadLevelup() {
     try {
@@ -408,8 +419,12 @@ const server = http.createServer(async (req, res) => {
                 roster[info.role].push({ id, name: info.name, nick: info.nick, date: info.date, days: info.days });
             }
             const avatars = await loadHighStaffAvatars(allIds);
+            const profiles = loadProfiles();
             for (const role of Object.keys(roster)) {
-                roster[role].forEach(m => { m.avatar = avatars[m.id] || null; });
+                roster[role].forEach(m => {
+                    m.avatar = avatars[m.id] || null;
+                    m.banner = (profiles[m.id] && profiles[m.id].banner) || null;
+                });
             }
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
             res.end(JSON.stringify({ updated_at: new Date(highStaffCache.at).toISOString(), roster }));
@@ -417,6 +432,28 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: e.message }));
         }
+        return;
+    }
+
+    // POST /api/save-banner.php — баннер профиля, виден всем в "Составе вышки"
+    if (pathname === '/api/save-banner.php' && req.method === 'POST') {
+        const user = currentUser(req);
+        if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
+        if (!user.discord_id) { res.writeHead(400); res.end(JSON.stringify({ error: 'no discord_id' })); return; }
+        const body = await readJsonBody(req);
+        const banner = String(body.banner || '').trim();
+        if (banner.length > 2 * 1024 * 1024) {
+            res.writeHead(400); res.end(JSON.stringify({ error: 'banner too large' })); return;
+        }
+        if (banner && !/^(data:image\/|https?:\/\/)/i.test(banner)) {
+            res.writeHead(400); res.end(JSON.stringify({ error: 'bad banner format' })); return;
+        }
+        const profiles = loadProfiles();
+        if (!banner) delete profiles[user.discord_id];
+        else profiles[user.discord_id] = { banner, updated_at: new Date().toISOString() };
+        saveProfilesFile(profiles);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
         return;
     }
 
