@@ -124,6 +124,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             <a class="nav-link" data-tab="events"><i class="fas fa-bullhorn"></i> <span>Ивенты</span></a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" data-tab="embeds"><i class="fas fa-rectangle-list"></i> <span>Эмбиты</span></a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" data-tab="giveaways"><i class="fas fa-gift"></i> <span>Розыгрыши</span></a>
                         </li>
                         <li class="nav-item">
@@ -526,6 +529,71 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     </div>
                 </section>
 
+                <!-- Эмбиты -->
+                <section class="tab-page" id="tab-embeds">
+                    <div class="embeds-layout">
+                        <div class="card">
+                            <div class="card-header">
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <i class="fas fa-rectangle-list" style="color:var(--accent);font-size:1.3rem;"></i>
+                                    <h3>Новый эмбит</h3>
+                                </div>
+                            </div>
+
+                            <label class="form-label">Канал</label>
+                            <div class="embed-channel-row">
+                                <label class="embed-channel-opt">
+                                    <input type="radio" name="embedChannel" value="master" checked>
+                                    <span>Инфо для мастеров</span>
+                                </label>
+                                <label class="embed-channel-opt">
+                                    <input type="radio" name="embedChannel" value="curator">
+                                    <span>Инфо для кураторов</span>
+                                </label>
+                            </div>
+
+                            <label class="form-label">Заголовок</label>
+                            <input type="text" id="embedTitle" class="form-control" placeholder="Заголовок эмбита" maxlength="256">
+
+                            <label class="form-label">Текст</label>
+                            <textarea id="embedDescription" class="form-control" rows="6" placeholder="Текст эмбита" maxlength="4096" style="resize:vertical;"></textarea>
+
+                            <label class="form-label">Картинка (URL, необязательно)</label>
+                            <input type="text" id="embedImage" class="form-control" placeholder="https://...">
+
+                            <label class="form-label">Цвет полоски</label>
+                            <div class="embed-color-row">
+                                <div class="embed-color-swatches" id="embedColorSwatches"></div>
+                                <input type="color" id="embedColorPicker" value="#e5352b" class="embed-color-picker">
+                            </div>
+
+                            <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
+                                <button class="btn-confirm-save" id="embedSendBtn" type="button">
+                                    <i class="fab fa-discord"></i> Отправить
+                                </button>
+                            </div>
+                            <div id="embedStatusMsg" style="margin-top:0.75rem;font-size:0.85rem;"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <i class="fas fa-eye" style="color:var(--accent);font-size:1.3rem;"></i>
+                                    <h3>Превью</h3>
+                                </div>
+                            </div>
+                            <div class="discord-embed-preview">
+                                <div class="discord-embed-bar" id="embedPreviewBar"></div>
+                                <div class="discord-embed-body">
+                                    <div class="discord-embed-title" id="embedPreviewTitle"></div>
+                                    <div class="discord-embed-desc" id="embedPreviewDesc"></div>
+                                    <img class="discord-embed-image" id="embedPreviewImage" style="display:none;" alt="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Модалка ивента -->
                 <div id="eventModal" class="modal">
                     <div class="modal-content" style="max-width:680px;">
@@ -868,7 +936,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             'reatt-masters':    2,  // Curator+
             'memo-curators':    2,  // Curator+
             'wheel':            2,  // Curator+
-            'sync':             1   // все
+            'sync':             1,  // все
+            'embeds':           2   // Curator+
         };
         function currentRoleLevel() {
             return (ROLES[CURRENT_USER.role] || {}).level || 0;
@@ -910,7 +979,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             'reatt-moders': ['Переаттестация для модеров', 'Вопросы для модеров'],
             'reports': ['Отчётность', 'Все отчёты собеседований'],
             'tokens': ['Токены', 'Учёт токенов'],
-            'levelup': ['Level up', '']
+            'levelup': ['Level up', ''],
+            'embeds': ['Эмбиты', 'Публикация в инфо-каналы']
         };
 
         const links = document.querySelectorAll('.nav-link[data-tab]');
@@ -1578,6 +1648,84 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
 
         renderEventTypes();
         renderEventsList();
+
+        // === Эмбиты ===
+        (function initEmbeds() {
+            const btn = document.getElementById('embedSendBtn');
+            if (!btn) return;
+            const titleInput = document.getElementById('embedTitle');
+            const descInput = document.getElementById('embedDescription');
+            const imageInput = document.getElementById('embedImage');
+            const colorPicker = document.getElementById('embedColorPicker');
+            const swatchesBox = document.getElementById('embedColorSwatches');
+            const statusMsg = document.getElementById('embedStatusMsg');
+
+            const previewBar = document.getElementById('embedPreviewBar');
+            const previewTitle = document.getElementById('embedPreviewTitle');
+            const previewDesc = document.getElementById('embedPreviewDesc');
+            const previewImage = document.getElementById('embedPreviewImage');
+
+            const PRESET_COLORS = ['#e5352b', '#fbbf24', '#34d399', '#9fb4cc', '#d99cb8', '#5865f2'];
+            swatchesBox.innerHTML = PRESET_COLORS.map(c =>
+                `<button type="button" class="embed-swatch" data-color="${c}" style="background:${c};"></button>`
+            ).join('');
+            swatchesBox.querySelectorAll('.embed-swatch').forEach(sw => {
+                sw.addEventListener('click', () => { colorPicker.value = sw.dataset.color; updatePreview(); });
+            });
+
+            function updatePreview() {
+                previewBar.style.background = colorPicker.value;
+                previewTitle.textContent = titleInput.value || 'Заголовок';
+                previewTitle.style.opacity = titleInput.value ? '1' : '0.4';
+                previewDesc.textContent = descInput.value || 'Текст эмбита появится здесь…';
+                previewDesc.style.opacity = descInput.value ? '1' : '0.4';
+                const img = imageInput.value.trim();
+                if (img) {
+                    previewImage.src = img;
+                    previewImage.style.display = 'block';
+                } else {
+                    previewImage.style.display = 'none';
+                }
+            }
+            [titleInput, descInput, imageInput, colorPicker].forEach(el => el.addEventListener('input', updatePreview));
+            updatePreview();
+
+            btn.addEventListener('click', async () => {
+                const title = titleInput.value.trim();
+                const description = descInput.value.trim();
+                if (!title && !description) {
+                    statusMsg.textContent = 'Заполни заголовок или текст.';
+                    statusMsg.style.color = 'var(--bad)';
+                    return;
+                }
+                const channel = document.querySelector('input[name="embedChannel"]:checked').value;
+                btn.disabled = true;
+                statusMsg.textContent = 'Отправляю…';
+                statusMsg.style.color = 'var(--text-secondary)';
+                try {
+                    const r = await fetch('/api/send-embed.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            channel, title, description,
+                            image: imageInput.value.trim(),
+                            color: colorPicker.value
+                        })
+                    });
+                    const data = await r.json();
+                    if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
+                    statusMsg.textContent = 'Отправлено ✓';
+                    statusMsg.style.color = 'var(--ok)';
+                    titleInput.value = ''; descInput.value = ''; imageInput.value = '';
+                    updatePreview();
+                } catch (e) {
+                    statusMsg.textContent = 'Ошибка: ' + e.message;
+                    statusMsg.style.color = 'var(--bad)';
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
 
         // === Level up ===
         const LVL_MAX = 10;

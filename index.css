@@ -1021,6 +1021,38 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 .report-card.r-event { border-left: 2px solid var(--warn); background: transparent; border-color: var(--border-color); }
 .report-type.rt-event { background: transparent; color: var(--warn); border: 1px solid rgba(251, 191, 36, 0.3); }
 
+/* ---------- Эмбиты ---------- */
+.embeds-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+@media (max-width: 900px) { .embeds-layout { grid-template-columns: 1fr; } }
+.embed-channel-row { display: flex; gap: 0.6rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.embed-channel-opt {
+    display: flex; align-items: center; gap: 8px; padding: 0.6rem 1rem;
+    background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px;
+    font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; transition: var(--transition);
+}
+.embed-channel-opt:has(input:checked) { border-color: var(--accent); color: var(--text-primary); }
+.embed-color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem; }
+.embed-color-swatches { display: flex; gap: 8px; }
+.embed-swatch {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border-strong);
+    cursor: pointer; padding: 0; transition: var(--transition);
+}
+.embed-swatch:hover { transform: scale(1.1); border-color: var(--text-secondary); }
+.embed-color-picker {
+    width: 40px; height: 32px; padding: 2px; border-radius: 8px; border: 1px solid var(--border-color);
+    background: var(--surface-2); cursor: pointer;
+}
+
+/* Мимикрия под настоящий Discord-эмбит */
+.discord-embed-preview {
+    display: flex; background: #2b2d31; border-radius: 8px; overflow: hidden; max-width: 460px;
+}
+.discord-embed-bar { width: 4px; flex-shrink: 0; background: var(--accent); }
+.discord-embed-body { padding: 0.85rem 1rem; flex: 1; min-width: 0; }
+.discord-embed-title { color: #fff; font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; word-break: break-word; }
+.discord-embed-desc { color: #dbdee1; font-size: 0.86rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.discord-embed-image { display: block; max-width: 100%; border-radius: 6px; margin-top: 10px; }
+
 .warn-target-info { background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 11px; padding: 0.85rem 1rem; margin-bottom: 1rem; }
 
 .warn-card { align-items: stretch !important; flex-wrap: nowrap !important; }

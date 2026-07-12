@@ -454,6 +454,56 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // === Эмбиты в инфо-каналы (curator+) ===
+    // Каналы жёстко зашиты списком — клиент выбирает только ключ ('master'/
+    // 'curator'), не сырой channel_id, чтобы нельзя было запостить в чужой канал.
+    if (pathname === '/api/send-embed.php' && req.method === 'POST') {
+        const user = currentUser(req);
+        if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
+        if (roleLevel(user.role) < 2) { res.writeHead(403); res.end(JSON.stringify({ error: 'forbidden' })); return; }
+
+        const EMBED_CHANNELS = {
+            master: '1510992131446018139',
+            curator: '1510992164392538163'
+        };
+        const body = await readJsonBody(req);
+        const channelId = EMBED_CHANNELS[body.channel];
+        if (!channelId) { res.writeHead(400); res.end(JSON.stringify({ error: 'bad channel' })); return; }
+
+        const title = String(body.title || '').slice(0, 256);
+        const description = String(body.description || '').slice(0, 4096);
+        const image = String(body.image || '').trim();
+        if (!title && !description) { res.writeHead(400); res.end(JSON.stringify({ error: 'empty embed' })); return; }
+
+        let color = 0xe5352b;
+        if (/^#[0-9a-fA-F]{6}$/.test(body.color || '')) color = parseInt(body.color.slice(1), 16);
+
+        const embed = { color };
+        if (title) embed.title = title;
+        if (description) embed.description = description;
+        if (image && /^https?:\/\//.test(image)) embed.image = { url: image };
+
+        try {
+            const discordToken = process.env.DISCORD_TOKEN || '';
+            if (!discordToken) throw new Error('DISCORD_TOKEN не настроен');
+            const resp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bot ' + discordToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ embeds: [embed] })
+            });
+            if (!resp.ok) {
+                const errText = await resp.text();
+                throw new Error('Discord HTTP ' + resp.status + ': ' + errText.slice(0, 300));
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
     // === Выговоры ===
     if (pathname === '/api/warnings') {
         const user = currentUser(req);
