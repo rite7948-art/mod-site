@@ -243,6 +243,13 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
 
                 <!-- Главная -->
                 <section class="tab-page active" id="tab-home">
+                    <div class="home-banner-card" id="homeBannerCard">
+                        <div class="home-banner-overlay">
+                            <div class="home-banner-greeting">С возвращением</div>
+                            <div class="home-banner-name" id="homeBannerName"></div>
+                        </div>
+                    </div>
+
                     <div class="card">
                         <div class="card-header">
                             <div style="display:flex;align-items:center;gap:12px;">
@@ -531,66 +538,57 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
 
                 <!-- Эмбиты -->
                 <section class="tab-page" id="tab-embeds">
-                    <div class="embeds-layout">
-                        <div class="card">
-                            <div class="card-header">
-                                <div style="display:flex;align-items:center;gap:12px;">
-                                    <i class="fas fa-rectangle-list" style="color:var(--accent);font-size:1.3rem;"></i>
-                                    <h3>Новый эмбит</h3>
-                                </div>
-                            </div>
-
-                            <label class="form-label">Канал</label>
-                            <div class="embed-channel-row">
-                                <label class="embed-channel-opt">
-                                    <input type="radio" name="embedChannel" value="master" checked>
-                                    <span>Инфо для мастеров</span>
-                                </label>
-                                <label class="embed-channel-opt">
-                                    <input type="radio" name="embedChannel" value="curator">
-                                    <span>Инфо для кураторов</span>
-                                </label>
-                            </div>
-
-                            <label class="form-label">Заголовок</label>
-                            <input type="text" id="embedTitle" class="form-control" placeholder="Заголовок эмбита" maxlength="256">
-
-                            <label class="form-label">Текст</label>
-                            <textarea id="embedDescription" class="form-control" rows="6" placeholder="Текст эмбита" maxlength="4096" style="resize:vertical;"></textarea>
-
-                            <label class="form-label">Картинка (URL, необязательно)</label>
-                            <input type="text" id="embedImage" class="form-control" placeholder="https://...">
-
-                            <label class="form-label">Цвет полоски</label>
-                            <div class="embed-color-row">
-                                <div class="embed-color-swatches" id="embedColorSwatches"></div>
-                                <input type="color" id="embedColorPicker" value="#e5352b" class="embed-color-picker">
-                            </div>
-
-                            <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
-                                <button class="btn-confirm-save" id="embedSendBtn" type="button">
-                                    <i class="fab fa-discord"></i> Отправить
-                                </button>
-                            </div>
-                            <div id="embedStatusMsg" style="margin-top:0.75rem;font-size:0.85rem;"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <div style="display:flex;align-items:center;gap:12px;">
-                                    <i class="fas fa-eye" style="color:var(--accent);font-size:1.3rem;"></i>
-                                    <h3>Превью</h3>
-                                </div>
-                            </div>
-                            <div class="discord-embed-preview">
-                                <div class="discord-embed-bar" id="embedPreviewBar"></div>
-                                <div class="discord-embed-body">
-                                    <div class="discord-embed-title" id="embedPreviewTitle"></div>
-                                    <div class="discord-embed-desc" id="embedPreviewDesc"></div>
-                                    <img class="discord-embed-image" id="embedPreviewImage" style="display:none;" alt="">
-                                </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <i class="fas fa-rectangle-list" style="color:var(--accent);font-size:1.3rem;"></i>
+                                <h3>Эмбит для инфо-канала</h3>
                             </div>
                         </div>
+
+                        <label class="form-label">Канал</label>
+                        <div class="embed-channel-row">
+                            <label class="embed-channel-opt">
+                                <input type="radio" name="embedChannel" value="master" checked>
+                                <span>Инфо для мастеров</span>
+                            </label>
+                            <label class="embed-channel-opt">
+                                <input type="radio" name="embedChannel" value="curator">
+                                <span>Инфо для кураторов</span>
+                            </label>
+                        </div>
+
+                        <label class="form-label">Заголовок</label>
+                        <input type="text" id="embedTitle" class="form-control" placeholder="Заголовок эмбита" maxlength="256">
+
+                        <label class="form-label">Текст</label>
+                        <textarea id="embedDescription" class="form-control" rows="5" placeholder="Текст эмбита" maxlength="4096" style="resize:vertical;"></textarea>
+
+                        <label class="form-label">Картинка (URL, необязательно)</label>
+                        <input type="text" id="embedImage" class="form-control" placeholder="https://...">
+
+                        <label class="form-label">Цвет полоски</label>
+                        <div class="embed-color-row">
+                            <div class="embed-color-swatches" id="embedColorSwatches"></div>
+                            <input type="color" id="embedColorPicker" value="#e5352b" class="embed-color-picker">
+                        </div>
+
+                        <label class="form-label" style="margin-top:0.5rem;">Так будет выглядеть в Discord</label>
+                        <div class="discord-embed-preview">
+                            <div class="discord-embed-bar" id="embedPreviewBar"></div>
+                            <div class="discord-embed-body">
+                                <div class="discord-embed-title" id="embedPreviewTitle"></div>
+                                <div class="discord-embed-desc" id="embedPreviewDesc"></div>
+                                <img class="discord-embed-image" id="embedPreviewImage" style="display:none;" alt="">
+                            </div>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
+                            <button class="btn-confirm-save" id="embedSendBtn" type="button">
+                                <i class="fab fa-discord"></i> Отправить
+                            </button>
+                        </div>
+                        <div id="embedStatusMsg" style="margin-top:0.75rem;font-size:0.85rem;"></div>
                     </div>
                 </section>
 
@@ -2346,10 +2344,19 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 setBannerPreview(text.trim());
             }
         });
+        function applyHomeBanner() {
+            const card = document.getElementById('homeBannerCard');
+            if (!card) return;
+            card.style.backgroundImage = profileState.banner ? `url("${profileState.banner}")` : '';
+            document.getElementById('homeBannerName').textContent = CURRENT_USER.username || '';
+        }
+        applyHomeBanner();
+
         function saveProfileChanges() {
             profileState = { ...profileDraft };
             saveProfileState(profileState);
             document.getElementById('profSaveBar').style.display = 'none';
+            applyHomeBanner();
         }
         function discardProfileChanges() {
             profileDraft = { ...profileState };

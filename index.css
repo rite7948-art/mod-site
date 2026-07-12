@@ -807,6 +807,21 @@ body.auth-locked .dashboard-container { visibility: hidden; }
     .u-avatar-img { width: 120px; height: 120px; border-radius: 22px; }
 }
 
+/* ---------- Баннер профиля на главной ---------- */
+.home-banner-card {
+    background: var(--surface);
+    background-size: cover; background-position: center;
+    border-radius: var(--radius); border: 1px solid var(--border-color);
+    height: 130px; margin-bottom: 1.5rem; position: relative; overflow: hidden;
+    display: flex; align-items: flex-end;
+}
+.home-banner-overlay {
+    width: 100%; padding: 1rem 1.4rem;
+    background: linear-gradient(to top, rgba(10, 8, 7, 0.85), transparent 85%);
+}
+.home-banner-greeting { font-family: var(--font-mono); font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted); }
+.home-banner-name { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+
 /* ---------- Состав (главная) ---------- */
 .management-list { display: flex; flex-direction: column; gap: 1.75rem; }
 .management-category { background: transparent; border-radius: var(--radius); padding: 0; border: none; }
@@ -1022,8 +1037,6 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 .report-type.rt-event { background: transparent; color: var(--warn); border: 1px solid rgba(251, 191, 36, 0.3); }
 
 /* ---------- Эмбиты ---------- */
-.embeds-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
-@media (max-width: 900px) { .embeds-layout { grid-template-columns: 1fr; } }
 .embed-channel-row { display: flex; gap: 0.6rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .embed-channel-opt {
     display: flex; align-items: center; gap: 8px; padding: 0.6rem 1rem;
@@ -1046,6 +1059,7 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 /* Мимикрия под настоящий Discord-эмбит */
 .discord-embed-preview {
     display: flex; background: #2b2d31; border-radius: 8px; overflow: hidden; max-width: 460px;
+    margin-bottom: 1.25rem;
 }
 .discord-embed-bar { width: 4px; flex-shrink: 0; background: var(--accent); }
 .discord-embed-body { padding: 0.85rem 1rem; flex: 1; min-width: 0; }
