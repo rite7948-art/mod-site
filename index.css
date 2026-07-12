@@ -807,21 +807,6 @@ body.auth-locked .dashboard-container { visibility: hidden; }
     .u-avatar-img { width: 120px; height: 120px; border-radius: 22px; }
 }
 
-/* ---------- Баннер профиля на главной ---------- */
-.home-banner-card {
-    background: var(--surface);
-    background-size: cover; background-position: center;
-    border-radius: var(--radius); border: 1px solid var(--border-color);
-    height: 130px; margin-bottom: 1.5rem; position: relative; overflow: hidden;
-    display: flex; align-items: flex-end;
-}
-.home-banner-overlay {
-    width: 100%; padding: 1rem 1.4rem;
-    background: linear-gradient(to top, rgba(10, 8, 7, 0.85), transparent 85%);
-}
-.home-banner-greeting { font-family: var(--font-mono); font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted); }
-.home-banner-name { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
-
 /* ---------- Состав (главная) ---------- */
 .management-list { display: flex; flex-direction: column; gap: 1.75rem; }
 .management-category { background: transparent; border-radius: var(--radius); padding: 0; border: none; }
@@ -838,6 +823,15 @@ body.auth-locked .dashboard-container { visibility: hidden; }
     display: flex; align-items: center; gap: 1rem; transition: var(--transition);
 }
 .staff-card:hover { border-color: var(--border-strong); background: rgba(255, 255, 255, 0.02); }
+.staff-card.is-me {
+    background-size: cover; background-position: center;
+    border-color: var(--accent); position: relative; overflow: hidden; isolation: isolate;
+}
+.staff-card.is-me::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(100deg, rgba(10, 8, 7, 0.92) 30%, rgba(10, 8, 7, 0.55));
+    z-index: -1;
+}
 .staff-avatar {
     width: 50px; height: 50px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;

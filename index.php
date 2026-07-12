@@ -243,13 +243,6 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
 
                 <!-- Главная -->
                 <section class="tab-page active" id="tab-home">
-                    <div class="home-banner-card" id="homeBannerCard">
-                        <div class="home-banner-overlay">
-                            <div class="home-banner-greeting">С возвращением</div>
-                            <div class="home-banner-name" id="homeBannerName"></div>
-                        </div>
-                    </div>
-
                     <div class="card">
                         <div class="card-header">
                             <div style="display:flex;align-items:center;gap:12px;">
@@ -2088,8 +2081,13 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const blocks = ROSTER_CATEGORIES.map(cat => {
                 const members = roster[cat.key] || [];
                 if (members.length === 0) return '';
-                const cards = members.map(m => `
-                    <div class="staff-card">
+                const cards = members.map(m => {
+                    const isMe = CURRENT_USER.discord_id && m.id === CURRENT_USER.discord_id;
+                    const bannerAttr = (isMe && profileState.banner)
+                        ? ` style="background-image:url('${profileState.banner.replace(/'/g, '%27')}');"`
+                        : '';
+                    return `
+                    <div class="staff-card${isMe ? ' is-me' : ''}"${bannerAttr}>
                         ${m.avatar
                             ? `<img class="staff-avatar staff-avatar-img" src="${m.avatar}" alt="">`
                             : `<div class="staff-avatar"><i class="fas ${cat.icon}"></i></div>`}
@@ -2102,7 +2100,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                 ${m.days ? `<span class="staff-tag">${escapeHtml(m.days)} дн.</span>` : ''}
                             </div>
                         </div>
-                    </div>`).join('');
+                    </div>`;
+                }).join('');
                 return `
                     <div class="management-category ${cat.cls}">
                         <div class="category-header">
@@ -2344,19 +2343,11 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 setBannerPreview(text.trim());
             }
         });
-        function applyHomeBanner() {
-            const card = document.getElementById('homeBannerCard');
-            if (!card) return;
-            card.style.backgroundImage = profileState.banner ? `url("${profileState.banner}")` : '';
-            document.getElementById('homeBannerName').textContent = CURRENT_USER.username || '';
-        }
-        applyHomeBanner();
-
         function saveProfileChanges() {
             profileState = { ...profileDraft };
             saveProfileState(profileState);
             document.getElementById('profSaveBar').style.display = 'none';
-            applyHomeBanner();
+            loadWyshka();
         }
         function discardProfileChanges() {
             profileDraft = { ...profileState };
