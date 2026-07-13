@@ -89,7 +89,7 @@ if (!$staff) {
 
 // === Шаг 6: логиним ===
 $_SESSION['user_logged_in'] = true;
-$_SESSION['username']       = $staff['nick'] !== '' ? $staff['nick'] : ($dUser['global_name'] ?? $dUser['username'] ?? ('user_' . substr((string)$discordId, -4)));
+$_SESSION['username']       = ($staff['nick'] ?? '') !== '' ? $staff['nick'] : ($dUser['global_name'] ?? $dUser['username'] ?? ('user_' . substr((string)$discordId, -4)));
 $_SESSION['role']           = $staff['role'];
 $_SESSION['discord_id']     = (string)$discordId;
 
@@ -98,9 +98,19 @@ exit;
 
 // ================= Helpers =================
 
+// ID из этого списка всегда логинятся как admin, даже если их нет в таблице
+// (или таблица временно недоступна) — на случай пробелов/лагов в High staff.
+function super_admin_ids() {
+    return array_filter(array_map('trim', explode(',', getenv('SUPER_ADMIN_IDS') ?: '')));
+}
+
 function find_in_high_staff($discordId) {
+    $isSuperAdmin = in_array($discordId, super_admin_ids(), true);
+
     $csv = fetch_high_staff_csv();
-    if ($csv === null) return null;
+    if ($csv === null) {
+        return $isSuperAdmin ? ['nick' => null, 'role' => 'admin'] : null;
+    }
 
     $headers = [
         'administrator'            => 'admin',
@@ -128,10 +138,10 @@ function find_in_high_staff($discordId) {
         $id = trim((string)($r[2] ?? ''));
         if (!preg_match('/^\d{15,22}$/', $id)) continue;
         if ($id === $discordId) {
-            return ['nick' => trim((string)($r[3] ?? '')), 'role' => $currentRole];
+            return ['nick' => trim((string)($r[3] ?? '')), 'role' => $isSuperAdmin ? 'admin' : $currentRole];
         }
     }
-    return null;
+    return $isSuperAdmin ? ['nick' => null, 'role' => 'admin'] : null;
 }
 
 function fetch_high_staff_csv() {

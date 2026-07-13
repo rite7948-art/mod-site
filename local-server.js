@@ -163,14 +163,21 @@ async function loadHighStaff() {
     return byId;
 }
 
+// ID из этого списка всегда логинятся как admin, даже если их нет в таблице
+// (или таблица временно недоступна) — на случай пробелов/лагов в High staff.
+const SUPER_ADMIN_IDS = (process.env.SUPER_ADMIN_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+
 async function findInHighStaff(discordId) {
+    const id = String(discordId);
     try {
         const byId = await loadHighStaff();
-        const found = byId.get(String(discordId));
+        const found = byId.get(id);
+        if (SUPER_ADMIN_IDS.includes(id)) return { username: found ? found.nick : null, role: 'admin' };
         if (!found) return null;
         return { username: found.nick, role: found.role };
     } catch (e) {
         console.error('high staff sheet read err:', e.message);
+        if (SUPER_ADMIN_IDS.includes(id)) return { username: null, role: 'admin' };
         return null;
     }
 }
@@ -542,7 +549,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // === Выговоры ===
-    if (pathname === '/api/warnings') {
+    if (pathname === '/api/warnings.php') {
         const user = currentUser(req);
         if (!user) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -608,7 +615,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // POST /api/warnings/justify — снять (admin/asst — всем; curator — только мастерам)
-    if (pathname === '/api/warnings/justify' && req.method === 'POST') {
+    if (pathname === '/api/warnings-justify.php' && req.method === 'POST') {
         const user = currentUser(req);
         if (!user) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -640,7 +647,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // POST /api/warnings/delete — удалить (только admin)
-    if (pathname === '/api/warnings/delete' && req.method === 'POST') {
+    if (pathname === '/api/warnings-delete.php' && req.method === 'POST') {
         const user = currentUser(req);
         if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
         if (roleLevel(user.role) < 4) {

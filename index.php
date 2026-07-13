@@ -2602,7 +2602,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
         let lastAvatarById = {};
 
         async function fetchWarnings() {
-            const r = await fetch('/api/warnings');
+            const r = await fetch('/api/warnings.php');
             if (!r.ok) throw new Error('HTTP ' + r.status);
             const data = await r.json();
             allWarnings = data.items || [];
@@ -2681,7 +2681,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 document.querySelectorAll('.btn-warn-delete').forEach(b => {
                     b.addEventListener('click', async () => {
                         if (!confirm('Удалить выговор без следа?')) return;
-                        await fetch('/api/warnings/delete', {
+                        await fetch('/api/warnings-delete.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: +b.dataset.id })
@@ -2732,7 +2732,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             if (!currentIssueTarget) { alert('Не выбран пользователь'); return; }
             if (!reason) { alert('Укажи причину'); return; }
             const t = currentIssueTarget;
-            const r = await fetch('/api/warnings', {
+            const r = await fetch('/api/warnings.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -2784,7 +2784,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
         document.getElementById('warnJustifySubmit').addEventListener('click', async () => {
             if (!justifyTargetId) return;
             const reason = document.getElementById('warnJustifyReason').value.trim();
-            const r = await fetch('/api/warnings/justify', {
+            const r = await fetch('/api/warnings-justify.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: justifyTargetId, reason })
