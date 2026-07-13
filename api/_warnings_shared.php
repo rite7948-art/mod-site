@@ -24,6 +24,28 @@ function save_warnings($data) {
     file_put_contents(warnings_file_path(), json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 }
 
+// Гарантирует валидный UTF-8 в свободном пользовательском тексте (причина
+// выговора и т.п.) — иначе json_encode() тихо вернёт false и клиент получит
+// пустой 200-ответ, на котором fetch(...).json() падает без единой строки
+// в логах (снаружи выглядит как «кнопка выдать ничего не делает»).
+function clean_utf8($s) {
+    return mb_convert_encoding((string)$s, 'UTF-8', 'UTF-8');
+}
+
+// Всегда отдаёт валидный JSON — если json_encode всё же не смог (данные
+// не удалось привести к UTF-8), возвращает читаемую 500-ошибку вместо
+// пустого тела ответа.
+function json_response($data, $code = null) {
+    if ($code !== null) http_response_code($code);
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($json === false) {
+        http_response_code(500);
+        echo json_encode(['error' => 'json_encode failed: ' . json_last_error_msg()]);
+        exit;
+    }
+    echo $json;
+}
+
 function warn_is_expired($w) {
     return !empty($w['expires_at']) && strtotime($w['expires_at']) <= time();
 }

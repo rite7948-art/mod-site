@@ -2732,22 +2732,36 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             if (!currentIssueTarget) { alert('Не выбран пользователь'); return; }
             if (!reason) { alert('Укажи причину'); return; }
             const t = currentIssueTarget;
-            const r = await fetch('/api/warnings.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target_id: t.id,
-                    target_nick: t.nick,
-                    target_name: t.name,
-                    target_category: t.category,
-                    reason,
-                    duration_days: warnIssueDuration
-                })
-            });
-            const data = await r.json();
-            if (!r.ok) { alert('Ошибка: ' + (data.error || r.status)); return; }
-            closeWarnIssue();
-            renderWarningsLists();
+            const btn = document.getElementById('warnIssueSubmit');
+            btn.disabled = true;
+            try {
+                const r = await fetch('/api/warnings.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_id: t.id,
+                        target_nick: t.nick,
+                        target_name: t.name,
+                        target_category: t.category,
+                        reason,
+                        duration_days: warnIssueDuration
+                    })
+                });
+                let data;
+                try {
+                    data = await r.json();
+                } catch (parseErr) {
+                    alert('Сервер вернул некорректный ответ (HTTP ' + r.status + '). Попробуй ещё раз.');
+                    return;
+                }
+                if (!r.ok) { alert('Ошибка: ' + (data.error || r.status)); return; }
+                closeWarnIssue();
+                renderWarningsLists();
+            } catch (netErr) {
+                alert('Не удалось связаться с сервером: ' + netErr.message);
+            } finally {
+                btn.disabled = false;
+            }
         });
 
         // --- Модалка снятия ---
@@ -2784,15 +2798,25 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
         document.getElementById('warnJustifySubmit').addEventListener('click', async () => {
             if (!justifyTargetId) return;
             const reason = document.getElementById('warnJustifyReason').value.trim();
-            const r = await fetch('/api/warnings-justify.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: justifyTargetId, reason })
-            });
-            const data = await r.json();
-            if (!r.ok) { alert('Ошибка: ' + (data.error || r.status)); return; }
-            closeJustify();
-            renderWarningsLists();
+            try {
+                const r = await fetch('/api/warnings-justify.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: justifyTargetId, reason })
+                });
+                let data;
+                try {
+                    data = await r.json();
+                } catch (parseErr) {
+                    alert('Сервер вернул некорректный ответ (HTTP ' + r.status + '). Попробуй ещё раз.');
+                    return;
+                }
+                if (!r.ok) { alert('Ошибка: ' + (data.error || r.status)); return; }
+                closeJustify();
+                renderWarningsLists();
+            } catch (netErr) {
+                alert('Не удалось связаться с сервером: ' + netErr.message);
+            }
         });
 
         // Фильтр архива

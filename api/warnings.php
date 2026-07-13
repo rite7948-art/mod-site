@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $w['status'] = warn_status($w);
         return $w;
     }, $data['items']);
-    echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+    json_response(['items' => $items]);
     exit;
 }
 
@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $item = [
         'id' => $data['next_id']++,
         'target_id' => (string)$body['target_id'],
-        'target_nick' => (string)$body['target_nick'],
-        'target_name' => (string)($body['target_name'] ?? ''),
+        'target_nick' => clean_utf8($body['target_nick']),
+        'target_name' => clean_utf8($body['target_name'] ?? ''),
         'target_category' => (string)($body['target_category'] ?? 'master'),
-        'reason' => mb_substr((string)$body['reason'], 0, 500),
+        'reason' => mb_substr(clean_utf8($body['reason']), 0, 500),
         'duration_days' => $durationDays,
         'issued_by' => $_SESSION['username'] ?? '',
         'issued_by_role' => $_SESSION['role'] ?? '',
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     sync_warning_to_sheet($item['target_id'], count_active_for($data['items'], $item['target_id']));
 
     $item['status'] = warn_status($item);
-    echo json_encode(['ok' => true, 'item' => $item], JSON_UNESCAPED_UNICODE);
+    json_response(['ok' => true, 'item' => $item]);
     exit;
 }
 

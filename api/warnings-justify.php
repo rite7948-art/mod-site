@@ -49,7 +49,7 @@ if (!empty($data['items'][$idx]['justified_at'])) {
 
 $data['items'][$idx]['justified_by'] = $_SESSION['username'] ?? '';
 $data['items'][$idx]['justified_at'] = gmdate('Y-m-d\TH:i:s\Z');
-$reason = mb_substr((string)($body['reason'] ?? ''), 0, 300);
+$reason = mb_substr(clean_utf8($body['reason'] ?? ''), 0, 300);
 $data['items'][$idx]['justify_reason'] = $reason !== '' ? $reason : null;
 
 save_warnings($data);
@@ -57,4 +57,4 @@ sync_warning_to_sheet($data['items'][$idx]['target_id'], count_active_for($data[
 
 $item = $data['items'][$idx];
 $item['status'] = warn_status($item);
-echo json_encode(['ok' => true, 'item' => $item], JSON_UNESCAPED_UNICODE);
+json_response(['ok' => true, 'item' => $item]);
