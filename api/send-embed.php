@@ -56,6 +56,8 @@ $embed = ['color' => $color];
 if ($title !== '') $embed['title'] = $title;
 if ($description !== '') $embed['description'] = $description;
 if ($image !== '' && preg_match('#^https?://#i', $image)) $embed['image'] = ['url' => $image];
+$embed['footer'] = ['text' => 'Опубликовал ' . ($_SESSION['username'] ?? '?')];
+$embed['timestamp'] = gmdate('c');
 
 $token = getenv('DISCORD_TOKEN') ?: '';
 if (!$token) {
@@ -82,5 +84,22 @@ if ($resp === false || $status >= 300) {
     echo json_encode(['error' => 'Discord HTTP ' . $status . ': ' . substr((string)$resp, 0, 300)]);
     exit;
 }
+
+$logPath = getenv('EMBEDS_LOG_JSON_PATH') ?: (__DIR__ . '/../embeds_log.json');
+$log = json_decode(@file_get_contents($logPath) ?: '{}', true) ?: [];
+$log['next_id'] = $log['next_id'] ?? 1;
+$log['items'] = is_array($log['items'] ?? null) ? $log['items'] : [];
+$log['items'][] = [
+    'id' => $log['next_id']++,
+    'channel' => $channelKey,
+    'title' => $title,
+    'description' => $description,
+    'image' => $image,
+    'color' => (string)($body['color'] ?? '#e5352b'),
+    'sent_by' => $_SESSION['username'] ?? '',
+    'created_at' => gmdate('c'),
+];
+if (count($log['items']) > 30) $log['items'] = array_slice($log['items'], -30);
+file_put_contents($logPath, json_encode($log, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
 echo json_encode(['ok' => true]);

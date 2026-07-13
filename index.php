@@ -551,10 +551,16 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             </label>
                         </div>
 
-                        <label class="form-label">Заголовок</label>
+                        <div class="embed-label-row">
+                            <label class="form-label">Заголовок</label>
+                            <span class="embed-char-counter" id="embedTitleCount">0/256</span>
+                        </div>
                         <input type="text" id="embedTitle" class="form-control" placeholder="Заголовок эмбита" maxlength="256">
 
-                        <label class="form-label">Текст</label>
+                        <div class="embed-label-row">
+                            <label class="form-label">Текст</label>
+                            <span class="embed-char-counter" id="embedDescCount">0/4096</span>
+                        </div>
                         <textarea id="embedDescription" class="form-control" rows="5" placeholder="Текст эмбита" maxlength="4096" style="resize:vertical;"></textarea>
 
                         <label class="form-label">Картинка (URL, необязательно)</label>
@@ -582,6 +588,11 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             </button>
                         </div>
                         <div id="embedStatusMsg" style="margin-top:0.75rem;font-size:0.85rem;"></div>
+
+                        <label class="form-label" style="margin-top:1.75rem;">Последние отправленные</label>
+                        <div id="embedHistoryList" class="embed-history-list">
+                            <div class="reports-empty">Загрузка…</div>
+                        </div>
                     </div>
                 </section>
 
@@ -1650,6 +1661,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const colorPicker = document.getElementById('embedColorPicker');
             const swatchesBox = document.getElementById('embedColorSwatches');
             const statusMsg = document.getElementById('embedStatusMsg');
+            const titleCount = document.getElementById('embedTitleCount');
+            const descCount = document.getElementById('embedDescCount');
+            const historyList = document.getElementById('embedHistoryList');
 
             const previewBar = document.getElementById('embedPreviewBar');
             const previewTitle = document.getElementById('embedPreviewTitle');
@@ -1664,6 +1678,12 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 sw.addEventListener('click', () => { colorPicker.value = sw.dataset.color; updatePreview(); });
             });
 
+            function updateCounter(el, input, max) {
+                const len = input.value.length;
+                el.textContent = len + '/' + max;
+                el.classList.toggle('is-near-limit', len > max * 0.9);
+            }
+
             function updatePreview() {
                 previewBar.style.background = colorPicker.value;
                 previewTitle.textContent = titleInput.value || 'Заголовок';
@@ -1677,9 +1697,67 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 } else {
                     previewImage.style.display = 'none';
                 }
+                updateCounter(titleCount, titleInput, 256);
+                updateCounter(descCount, descInput, 4096);
             }
             [titleInput, descInput, imageInput, colorPicker].forEach(el => el.addEventListener('input', updatePreview));
             updatePreview();
+
+            // --- История последних отправленных — с возможностью повторить как шаблон ---
+            const CHANNEL_LABELS = { master: 'Мастера', curator: 'Кураторы' };
+            let historyItems = [];
+
+            function historyItemHTML(item, idx) {
+                const label = CHANNEL_LABELS[item.channel] || item.channel;
+                const when = item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '';
+                return `
+                    <div class="embed-history-item">
+                        <div class="embed-history-dot" style="background:${escapeHtml(item.color || '#e5352b')};"></div>
+                        <div class="embed-history-main">
+                            <div class="embed-history-title">${escapeHtml(item.title || item.description || '(без текста)')}</div>
+                            <div class="embed-history-meta">
+                                <span class="warn-cat-${item.channel === 'curator' ? 'curator' : 'master'}">${escapeHtml(label)}</span>
+                                <span>${escapeHtml(item.sent_by || '—')}</span>
+                                <span>${escapeHtml(when)}</span>
+                            </div>
+                        </div>
+                        <button class="embed-history-repeat" data-idx="${idx}" type="button" title="Повторить как шаблон">
+                            <i class="fas fa-rotate-left"></i>
+                        </button>
+                    </div>`;
+            }
+
+            async function fetchEmbedHistory() {
+                try {
+                    const r = await fetch('/api/embeds-log.php');
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const data = await r.json();
+                    historyItems = data.items || [];
+                    if (historyItems.length === 0) {
+                        historyList.innerHTML = '<div class="reports-empty">Пока ничего не отправляли.</div>';
+                        return;
+                    }
+                    historyList.innerHTML = historyItems.map(historyItemHTML).join('');
+                    historyList.querySelectorAll('.embed-history-repeat').forEach(b => {
+                        b.addEventListener('click', () => {
+                            const item = historyItems[+b.dataset.idx];
+                            if (!item) return;
+                            titleInput.value = item.title || '';
+                            descInput.value = item.description || '';
+                            imageInput.value = item.image || '';
+                            colorPicker.value = item.color || '#e5352b';
+                            const radio = document.querySelector(`input[name="embedChannel"][value="${item.channel === 'curator' ? 'curator' : 'master'}"]`);
+                            if (radio) radio.checked = true;
+                            updatePreview();
+                            statusMsg.textContent = 'Заполнено из истории — проверь текст и отправляй.';
+                            statusMsg.style.color = 'var(--text-secondary)';
+                        });
+                    });
+                } catch (e) {
+                    historyList.innerHTML = '<div class="reports-empty">Не удалось загрузить историю.</div>';
+                }
+            }
+            fetchEmbedHistory();
 
             btn.addEventListener('click', async () => {
                 const title = titleInput.value.trim();
@@ -1709,6 +1787,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     statusMsg.style.color = 'var(--ok)';
                     titleInput.value = ''; descInput.value = ''; imageInput.value = '';
                     updatePreview();
+                    fetchEmbedHistory();
                 } catch (e) {
                     statusMsg.textContent = 'Ошибка: ' + e.message;
                     statusMsg.style.color = 'var(--bad)';

@@ -17,6 +17,8 @@ const WARN_PATH = process.env.WARNINGS_JSON_PATH || path.join(ROOT, 'warnings.js
 const EVENTS_PATH = process.env.EVENTS_JSON_PATH || path.join(ROOT, 'events.json');
 const LEVELUP_PATH = process.env.LEVELUP_JSON_PATH || path.join(ROOT, 'levelup.json');
 const PROFILES_PATH = process.env.PROFILES_JSON_PATH || path.join(ROOT, 'profiles.json');
+const EMBEDS_LOG_PATH = process.env.EMBEDS_LOG_JSON_PATH || path.join(ROOT, 'embeds_log.json');
+const EMBEDS_LOG_MAX = 30;
 
 function loadProfiles() {
     try {
@@ -26,6 +28,21 @@ function loadProfiles() {
 }
 function saveProfilesFile(data) {
     fs.writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2));
+}
+
+function loadEmbedsLog() {
+    try {
+        if (!fs.existsSync(EMBEDS_LOG_PATH)) return { next_id: 1, items: [] };
+        const d = JSON.parse(fs.readFileSync(EMBEDS_LOG_PATH, 'utf8'));
+        return { next_id: d.next_id || 1, items: Array.isArray(d.items) ? d.items : [] };
+    } catch { return { next_id: 1, items: [] }; }
+}
+function appendEmbedsLog(entry) {
+    const data = loadEmbedsLog();
+    entry.id = data.next_id++;
+    data.items.push(entry);
+    if (data.items.length > EMBEDS_LOG_MAX) data.items = data.items.slice(-EMBEDS_LOG_MAX);
+    fs.writeFileSync(EMBEDS_LOG_PATH, JSON.stringify(data, null, 2));
 }
 
 function loadLevelup() {
@@ -526,6 +543,8 @@ const server = http.createServer(async (req, res) => {
         if (title) embed.title = title;
         if (description) embed.description = description;
         if (image && /^https?:\/\//.test(image)) embed.image = { url: image };
+        embed.footer = { text: 'Опубликовал ' + (user.username || '?') };
+        embed.timestamp = new Date().toISOString();
 
         try {
             const discordToken = process.env.DISCORD_TOKEN || '';
@@ -539,12 +558,29 @@ const server = http.createServer(async (req, res) => {
                 const errText = await resp.text();
                 throw new Error('Discord HTTP ' + resp.status + ': ' + errText.slice(0, 300));
             }
+            appendEmbedsLog({
+                channel: body.channel,
+                title, description, image, color: body.color || '#e5352b',
+                sent_by: user.username || '',
+                created_at: new Date().toISOString(),
+            });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
         } catch (e) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: e.message }));
         }
+        return;
+    }
+
+    // История последних отправленных эмбитов (для вкладки "Эмбиты")
+    if (pathname === '/api/embeds-log.php' && req.method === 'GET') {
+        const user = currentUser(req);
+        if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
+        if (roleLevel(user.role) < 2) { res.writeHead(403); res.end(JSON.stringify({ error: 'forbidden' })); return; }
+        const data = loadEmbedsLog();
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ items: data.items.slice().reverse() }));
         return;
     }
 

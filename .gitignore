@@ -13,6 +13,7 @@ moderators.json
 events.json
 levelup.json
 profiles.json
+embeds_log.json
 
 # Локальный рантайм Node.js и старый бэкап-снимок — не часть исходников
 node20/
