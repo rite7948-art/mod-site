@@ -36,7 +36,8 @@ if ($resp === false) {
 // Node-сервис о них не знает и знать не должен).
 $data = json_decode($resp, true);
 if (is_array($data) && isset($data['roster']) && is_array($data['roster'])) {
-    $profiles = json_decode(@file_get_contents(__DIR__ . '/../profiles.json') ?: '{}', true) ?: [];
+    $profilesPath = getenv('PROFILES_JSON_PATH') ?: (__DIR__ . '/../profiles.json');
+    $profiles = json_decode(@file_get_contents($profilesPath) ?: '{}', true) ?: [];
     foreach ($data['roster'] as &$members) {
         if (!is_array($members)) continue;
         foreach ($members as &$m) {

@@ -32,7 +32,7 @@ if ($banner !== '' && !preg_match('#^(data:image/|https?://)#i', $banner)) {
     exit;
 }
 
-$path = __DIR__ . '/../profiles.json';
+$path = getenv('PROFILES_JSON_PATH') ?: (__DIR__ . '/../profiles.json');
 $profiles = json_decode(@file_get_contents($path) ?: '{}', true) ?: [];
 if ($banner === '') {
     unset($profiles[$discordId]);

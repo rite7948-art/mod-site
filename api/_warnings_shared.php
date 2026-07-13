@@ -9,7 +9,7 @@ function role_level_local($role) {
 }
 
 function warnings_file_path() {
-    return __DIR__ . '/../warnings.json';
+    return getenv('WARNINGS_JSON_PATH') ?: (__DIR__ . '/../warnings.json');
 }
 
 function load_warnings() {
