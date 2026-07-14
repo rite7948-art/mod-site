@@ -539,6 +539,17 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             </div>
                         </div>
 
+                        <label class="form-label">Изменить существующее сообщение</label>
+                        <div class="embed-link-row">
+                            <input type="text" id="embedLinkInput" class="form-control" placeholder="Вставь ссылку на сообщение в инфо-канале">
+                            <button class="btn-profile-action" id="embedLinkLoadBtn" type="button">Загрузить</button>
+                        </div>
+                        <div id="embedEditingBanner" class="embed-editing-banner" style="display:none;">
+                            <span><i class="fas fa-pen"></i> Редактируешь существующее сообщение</span>
+                            <a id="embedEditingLink" href="#" target="_blank" rel="noopener">Открыть в Discord ↗</a>
+                            <button id="embedEditingCancel" type="button" title="Отменить редактирование"><i class="fas fa-xmark"></i></button>
+                        </div>
+
                         <label class="form-label">Канал</label>
                         <div class="embed-channel-row">
                             <label class="embed-channel-opt">
@@ -584,7 +595,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
 
                         <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
                             <button class="btn-confirm-save" id="embedSendBtn" type="button">
-                                <i class="fab fa-discord"></i> Отправить
+                                <i class="fab fa-discord"></i> <span id="embedSendBtnLabel">Отправить</span>
                             </button>
                         </div>
                         <div id="embedStatusMsg" style="margin-top:0.75rem;font-size:0.85rem;"></div>
@@ -1655,6 +1666,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
         (function initEmbeds() {
             const btn = document.getElementById('embedSendBtn');
             if (!btn) return;
+            const btnLabel = document.getElementById('embedSendBtnLabel');
             const titleInput = document.getElementById('embedTitle');
             const descInput = document.getElementById('embedDescription');
             const imageInput = document.getElementById('embedImage');
@@ -1664,6 +1676,76 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const titleCount = document.getElementById('embedTitleCount');
             const descCount = document.getElementById('embedDescCount');
             const historyList = document.getElementById('embedHistoryList');
+            const linkInput = document.getElementById('embedLinkInput');
+            const linkLoadBtn = document.getElementById('embedLinkLoadBtn');
+            const editingBanner = document.getElementById('embedEditingBanner');
+            const editingLink = document.getElementById('embedEditingLink');
+            const editingCancelBtn = document.getElementById('embedEditingCancel');
+
+            const EMBED_GUILD_ID = '531970658633252864';
+            const EMBED_CHANNEL_IDS = { master: '1510992131446018139', curator: '1510992164392538163' };
+            const CHANNEL_KEY_BY_ID = Object.fromEntries(Object.entries(EMBED_CHANNEL_IDS).map(([k, v]) => [v, k]));
+            let editing = null; // { channelId, messageId }
+
+            function setChannelRadio(channelKey) {
+                const radio = document.querySelector(`input[name="embedChannel"][value="${channelKey === 'curator' ? 'curator' : 'master'}"]`);
+                if (radio) radio.checked = true;
+            }
+
+            function enterEditMode(channelKey, channelId, messageId, data) {
+                editing = { channelId, messageId };
+                titleInput.value = data.title || '';
+                descInput.value = data.description || '';
+                imageInput.value = data.image || '';
+                colorPicker.value = data.color || '#e5352b';
+                setChannelRadio(channelKey);
+                updatePreview();
+                btnLabel.textContent = 'Сохранить изменения';
+                editingLink.href = `https://discord.com/channels/${EMBED_GUILD_ID}/${channelId}/${messageId}`;
+                editingBanner.style.display = 'flex';
+                statusMsg.textContent = '';
+            }
+            function exitEditMode() {
+                editing = null;
+                btnLabel.textContent = 'Отправить';
+                editingBanner.style.display = 'none';
+                linkInput.value = '';
+            }
+            editingCancelBtn.addEventListener('click', () => {
+                exitEditMode();
+                titleInput.value = ''; descInput.value = ''; imageInput.value = '';
+                updatePreview();
+            });
+
+            linkLoadBtn.addEventListener('click', async () => {
+                const m = linkInput.value.trim().match(/discord\.com\/channels\/\d+\/(\d+)\/(\d+)/);
+                if (!m) {
+                    statusMsg.textContent = 'Это не похоже на ссылку на сообщение Discord.';
+                    statusMsg.style.color = 'var(--bad)';
+                    return;
+                }
+                const [, channelId, messageId] = m;
+                const channelKey = CHANNEL_KEY_BY_ID[channelId];
+                if (!channelKey) {
+                    statusMsg.textContent = 'Эта ссылка не на инфо-канал (мастера/кураторы).';
+                    statusMsg.style.color = 'var(--bad)';
+                    return;
+                }
+                linkLoadBtn.disabled = true;
+                statusMsg.textContent = 'Загружаю сообщение…';
+                statusMsg.style.color = 'var(--text-secondary)';
+                try {
+                    const r = await fetch(`/api/edit-embed.php?channel_id=${channelId}&message_id=${messageId}`);
+                    const data = await r.json();
+                    if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
+                    enterEditMode(channelKey, channelId, messageId, data);
+                } catch (e) {
+                    statusMsg.textContent = 'Ошибка: ' + e.message;
+                    statusMsg.style.color = 'var(--bad)';
+                } finally {
+                    linkLoadBtn.disabled = false;
+                }
+            });
 
             const previewBar = document.getElementById('embedPreviewBar');
             const previewTitle = document.getElementById('embedPreviewTitle');
@@ -1710,6 +1792,11 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             function historyItemHTML(item, idx) {
                 const label = CHANNEL_LABELS[item.channel] || item.channel;
                 const when = item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '';
+                const editedNote = item.edited_at ? ` <span title="Отредактировано">(ред. ${escapeHtml(item.edited_by || '')})</span>` : '';
+                const editBtn = item.message_id ? `
+                        <button class="embed-history-repeat" data-idx="${idx}" data-action="edit" type="button" title="Изменить это сообщение">
+                            <i class="fas fa-pen"></i>
+                        </button>` : '';
                 return `
                     <div class="embed-history-item">
                         <div class="embed-history-dot" style="background:${escapeHtml(item.color || '#e5352b')};"></div>
@@ -1718,10 +1805,11 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             <div class="embed-history-meta">
                                 <span class="warn-cat-${item.channel === 'curator' ? 'curator' : 'master'}">${escapeHtml(label)}</span>
                                 <span>${escapeHtml(item.sent_by || '—')}</span>
-                                <span>${escapeHtml(when)}</span>
+                                <span>${escapeHtml(when)}${editedNote}</span>
                             </div>
                         </div>
-                        <button class="embed-history-repeat" data-idx="${idx}" type="button" title="Повторить как шаблон">
+                        ${editBtn}
+                        <button class="embed-history-repeat" data-idx="${idx}" data-action="repeat" type="button" title="Повторить как шаблон (новое сообщение)">
                             <i class="fas fa-rotate-left"></i>
                         </button>
                     </div>`;
@@ -1742,12 +1830,16 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         b.addEventListener('click', () => {
                             const item = historyItems[+b.dataset.idx];
                             if (!item) return;
+                            if (b.dataset.action === 'edit' && item.message_id && item.channel_id) {
+                                enterEditMode(item.channel, item.channel_id, item.message_id, item);
+                                return;
+                            }
+                            exitEditMode();
                             titleInput.value = item.title || '';
                             descInput.value = item.description || '';
                             imageInput.value = item.image || '';
                             colorPicker.value = item.color || '#e5352b';
-                            const radio = document.querySelector(`input[name="embedChannel"][value="${item.channel === 'curator' ? 'curator' : 'master'}"]`);
-                            if (radio) radio.checked = true;
+                            setChannelRadio(item.channel);
                             updatePreview();
                             statusMsg.textContent = 'Заполнено из истории — проверь текст и отправляй.';
                             statusMsg.style.color = 'var(--text-secondary)';
@@ -1769,22 +1861,23 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 }
                 const channel = document.querySelector('input[name="embedChannel"]:checked').value;
                 btn.disabled = true;
-                statusMsg.textContent = 'Отправляю…';
+                statusMsg.textContent = editing ? 'Сохраняю…' : 'Отправляю…';
                 statusMsg.style.color = 'var(--text-secondary)';
                 try {
-                    const r = await fetch('/api/send-embed.php', {
+                    const url = editing ? '/api/edit-embed.php' : '/api/send-embed.php';
+                    const payload = editing
+                        ? { channel_id: editing.channelId, message_id: editing.messageId, title, description, image: imageInput.value.trim(), color: colorPicker.value }
+                        : { channel, title, description, image: imageInput.value.trim(), color: colorPicker.value };
+                    const r = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            channel, title, description,
-                            image: imageInput.value.trim(),
-                            color: colorPicker.value
-                        })
+                        body: JSON.stringify(payload)
                     });
                     const data = await r.json();
                     if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
-                    statusMsg.textContent = 'Отправлено ✓';
+                    statusMsg.textContent = editing ? 'Изменено ✓' : 'Отправлено ✓';
                     statusMsg.style.color = 'var(--ok)';
+                    exitEditMode();
                     titleInput.value = ''; descInput.value = ''; imageInput.value = '';
                     updatePreview();
                     fetchEmbedHistory();

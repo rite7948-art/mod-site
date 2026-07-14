@@ -1050,6 +1050,15 @@ body.auth-locked .dashboard-container { visibility: hidden; }
     width: 40px; height: 32px; padding: 2px; border-radius: 8px; border: 1px solid var(--border-color);
     background: var(--surface-2); cursor: pointer;
 }
+.embed-link-row { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+.embed-link-row .form-control { flex: 1; }
+.embed-editing-banner {
+    display: flex; align-items: center; gap: 12px; padding: 0.65rem 1rem; margin: -0.75rem 0 1.25rem;
+    background: rgba(251, 191, 36, 0.08); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 10px;
+    font-size: 0.82rem; color: var(--warn);
+}
+.embed-editing-banner a { color: var(--warn); text-decoration: underline; margin-left: auto; white-space: nowrap; }
+.embed-editing-banner button { background: transparent; border: none; color: var(--warn); cursor: pointer; font-size: 0.95rem; padding: 2px; }
 .embed-label-row { display: flex; justify-content: space-between; align-items: baseline; }
 .embed-char-counter { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-muted); }
 .embed-char-counter.is-near-limit { color: var(--warn); }

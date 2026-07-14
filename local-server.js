@@ -558,14 +558,17 @@ const server = http.createServer(async (req, res) => {
                 const errText = await resp.text();
                 throw new Error('Discord HTTP ' + resp.status + ': ' + errText.slice(0, 300));
             }
+            const sentMessage = await resp.json().catch(() => ({}));
             appendEmbedsLog({
                 channel: body.channel,
+                channel_id: channelId,
+                message_id: sentMessage.id || null,
                 title, description, image, color: body.color || '#e5352b',
                 sent_by: user.username || '',
                 created_at: new Date().toISOString(),
             });
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true }));
+            res.end(JSON.stringify({ ok: true, message_id: sentMessage.id || null, channel_id: channelId }));
         } catch (e) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: e.message }));
@@ -581,6 +584,98 @@ const server = http.createServer(async (req, res) => {
         const data = loadEmbedsLog();
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ items: data.items.slice().reverse() }));
+        return;
+    }
+
+    // Изменение уже отправленного эмбита по ссылке на сообщение (channel_id
+    // всегда сверяется со списком известных инфо-каналов).
+    if (pathname === '/api/edit-embed.php' && (req.method === 'GET' || req.method === 'POST')) {
+        const user = currentUser(req);
+        if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
+        if (roleLevel(user.role) < 2) { res.writeHead(403); res.end(JSON.stringify({ error: 'forbidden' })); return; }
+
+        const EMBED_CHANNELS = { master: '1510992131446018139', curator: '1510992164392538163' };
+        const channelKeyById = Object.fromEntries(Object.entries(EMBED_CHANNELS).map(([k, v]) => [v, k]));
+        const discordToken = process.env.DISCORD_TOKEN || '';
+        if (!discordToken) { res.writeHead(500); res.end(JSON.stringify({ error: 'DISCORD_TOKEN не настроен' })); return; }
+
+        if (req.method === 'GET') {
+            const channelId = (u.searchParams.get('channel_id') || '').trim();
+            const messageId = (u.searchParams.get('message_id') || '').trim();
+            if (!channelKeyById[channelId] || !/^\d{15,22}$/.test(messageId)) {
+                res.writeHead(400); res.end(JSON.stringify({ error: 'это не ссылка на инфо-канал' })); return;
+            }
+            try {
+                const resp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
+                    headers: { 'Authorization': 'Bot ' + discordToken }
+                });
+                if (!resp.ok) {
+                    res.writeHead(resp.status === 404 ? 404 : 502);
+                    res.end(JSON.stringify({ error: resp.status === 404 ? 'сообщение не найдено' : ('Discord HTTP ' + resp.status) }));
+                    return;
+                }
+                const msg = await resp.json();
+                const embed = (msg.embeds && msg.embeds[0]) || {};
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({
+                    channel: channelKeyById[channelId], channel_id: channelId, message_id: messageId,
+                    title: embed.title || '', description: embed.description || '', image: (embed.image && embed.image.url) || '',
+                    color: embed.color != null ? ('#' + embed.color.toString(16).padStart(6, '0')) : '#e5352b',
+                }));
+            } catch (e) {
+                res.writeHead(502); res.end(JSON.stringify({ error: e.message }));
+            }
+            return;
+        }
+
+        // POST — применить правки
+        const body = await readJsonBody(req);
+        const channelId = String(body.channel_id || '').trim();
+        const messageId = String(body.message_id || '').trim();
+        if (!channelKeyById[channelId] || !/^\d{15,22}$/.test(messageId)) {
+            res.writeHead(400); res.end(JSON.stringify({ error: 'это не ссылка на инфо-канал' })); return;
+        }
+        const title = String(body.title || '').trim().slice(0, 256);
+        const description = String(body.description || '').trim().slice(0, 4096);
+        const image = String(body.image || '').trim();
+        if (!title && !description) { res.writeHead(400); res.end(JSON.stringify({ error: 'empty embed' })); return; }
+        let color = 0xe5352b;
+        if (/^#[0-9a-fA-F]{6}$/.test(body.color || '')) color = parseInt(body.color.slice(1), 16);
+        const embed = { color };
+        if (title) embed.title = title;
+        if (description) embed.description = description;
+        if (image && /^https?:\/\//.test(image)) embed.image = { url: image };
+        embed.footer = { text: 'Отредактировал ' + (user.username || '?') };
+        embed.timestamp = new Date().toISOString();
+
+        try {
+            const resp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': 'Bot ' + discordToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ embeds: [embed] })
+            });
+            if (!resp.ok) {
+                const errText = await resp.text();
+                res.writeHead(resp.status === 404 ? 404 : 502);
+                res.end(JSON.stringify({ error: resp.status === 404 ? 'сообщение не найдено' : ('Discord HTTP ' + resp.status + ': ' + errText.slice(0, 300)) }));
+                return;
+            }
+            const log = loadEmbedsLog();
+            for (const item of log.items) {
+                if (item.message_id === messageId) {
+                    item.title = title; item.description = description; item.image = image;
+                    item.color = body.color || '#e5352b';
+                    item.edited_by = user.username || '';
+                    item.edited_at = new Date().toISOString();
+                }
+            }
+            fs.writeFileSync(EMBEDS_LOG_PATH, JSON.stringify(log, null, 2));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
         return;
     }
 

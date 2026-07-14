@@ -85,6 +85,8 @@ if ($resp === false || $status >= 300) {
     exit;
 }
 
+$sentMessage = json_decode((string)$resp, true) ?: [];
+
 $logPath = getenv('EMBEDS_LOG_JSON_PATH') ?: (__DIR__ . '/../embeds_log.json');
 $log = json_decode(@file_get_contents($logPath) ?: '{}', true) ?: [];
 $log['next_id'] = $log['next_id'] ?? 1;
@@ -92,6 +94,8 @@ $log['items'] = is_array($log['items'] ?? null) ? $log['items'] : [];
 $log['items'][] = [
     'id' => $log['next_id']++,
     'channel' => $channelKey,
+    'channel_id' => $channelId,
+    'message_id' => $sentMessage['id'] ?? null,
     'title' => $title,
     'description' => $description,
     'image' => $image,
@@ -102,4 +106,4 @@ $log['items'][] = [
 if (count($log['items']) > 30) $log['items'] = array_slice($log['items'], -30);
 file_put_contents($logPath, json_encode($log, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-echo json_encode(['ok' => true]);
+echo json_encode(['ok' => true, 'message_id' => $sentMessage['id'] ?? null, 'channel_id' => $channelId]);
