@@ -714,6 +714,7 @@ const server = http.createServer(async (req, res) => {
 
         const token = process.env.TELEGRAM_BOT_TOKEN || '';
         const chatId = process.env.TELEGRAM_REPORTS_CHAT_ID || '';
+        const threadId = process.env.TELEGRAM_REPORTS_THREAD_ID || '';
         if (!token || !chatId) {
             res.writeHead(500);
             res.end(JSON.stringify({ error: 'Telegram-бот не настроен (нет TELEGRAM_BOT_TOKEN / TELEGRAM_REPORTS_CHAT_ID)' }));
@@ -735,11 +736,14 @@ const server = http.createServer(async (req, res) => {
             ratingKeys.forEach(k => lines.push((k + 1) + '. ' + (ratings[k] || '')));
         }
 
+        const tgPayload = { chat_id: chatId, text: lines.join('\n') };
+        if (threadId) tgPayload.message_thread_id = Number(threadId);
+
         try {
             const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text: lines.join('\n') })
+                body: JSON.stringify(tgPayload)
             });
             if (!resp.ok) {
                 const errText = await resp.text();

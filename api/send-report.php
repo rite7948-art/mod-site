@@ -38,6 +38,7 @@ if ($nick === '' || $id === '') {
 
 $token = getenv('TELEGRAM_BOT_TOKEN') ?: '';
 $chatId = getenv('TELEGRAM_REPORTS_CHAT_ID') ?: '';
+$threadId = getenv('TELEGRAM_REPORTS_THREAD_ID') ?: '';
 if (!$token || !$chatId) {
     http_response_code(500);
     echo json_encode(['error' => 'Telegram-бот не настроен (нет TELEGRAM_BOT_TOKEN / TELEGRAM_REPORTS_CHAT_ID)']);
@@ -67,14 +68,14 @@ if (count($ratings) > 0) {
 
 $text = implode("\n", $lines);
 
+$payload = ['chat_id' => $chatId, 'text' => $text];
+if ($threadId !== '') $payload['message_thread_id'] = (int)$threadId;
+
 $ch = curl_init("https://api.telegram.org/bot{$token}/sendMessage");
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-    'chat_id' => $chatId,
-    'text' => $text,
-], JSON_UNESCAPED_UNICODE));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_UNICODE));
 curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 $resp = curl_exec($ch);
 $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
