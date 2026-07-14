@@ -28,7 +28,6 @@ $score = $body['score'] ?? '';
 $maxScore = $body['maxScore'] ?? '';
 $passed = !empty($body['passed']);
 $variant = trim((string)($body['variant'] ?? ''));
-$date = trim((string)($body['date'] ?? ''));
 $ratings = is_array($body['ratings'] ?? null) ? $body['ratings'] : [];
 
 if ($nick === '' || $id === '') {
@@ -56,7 +55,6 @@ $lines = [
     'Результат: ' . $score . ($maxScore !== '' ? ' / ' . $maxScore : '') . ' — ' . ($passed ? 'Сдал' : 'Не сдал'),
 ];
 if ($variant !== '') $lines[] = 'Вариант: ' . clean_utf8_report($variant);
-if ($date !== '') $lines[] = 'Дата: ' . clean_utf8_report($date);
 
 if (count($ratings) > 0) {
     $keys = array_map('intval', array_keys($ratings));

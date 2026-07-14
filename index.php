@@ -1294,7 +1294,6 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                     score, maxScore: cfg.maxScore,
                                     passed: score >= cfg.passingScore,
                                     variant: cfg.hasVariants ? report.variant : '',
-                                    date: report.date,
                                     ratings: report.ratings
                                 })
                             });

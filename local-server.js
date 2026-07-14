@@ -710,7 +710,6 @@ const server = http.createServer(async (req, res) => {
         const reviewer = String(body.reviewer || '').trim() || user.username || '?';
         const passed = !!body.passed;
         const variant = String(body.variant || '').trim();
-        const date = String(body.date || '').trim();
         if (!nick || !id) { res.writeHead(400); res.end(JSON.stringify({ error: 'nick/id required' })); return; }
 
         const token = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -728,7 +727,6 @@ const server = http.createServer(async (req, res) => {
             'Результат: ' + body.score + (body.maxScore !== undefined ? ' / ' + body.maxScore : '') + ' — ' + (passed ? 'Сдал' : 'Не сдал'),
         ];
         if (variant) lines.push('Вариант: ' + variant);
-        if (date) lines.push('Дата: ' + date);
 
         const ratings = (body.ratings && typeof body.ratings === 'object') ? body.ratings : {};
         const ratingKeys = Object.keys(ratings).map(Number).sort((a, b) => a - b);
