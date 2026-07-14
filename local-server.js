@@ -695,6 +695,62 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // Пересылка отчёта о собеседовании (модер/мастер) в Telegram-группу —
+    // раньше отчёты жили только в localStorage отправившего браузера.
+    if (pathname === '/api/send-report.php' && req.method === 'POST') {
+        const user = currentUser(req);
+        if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
+
+        const LABELS = { moder: 'Собес на модера', master: 'Собес на мастера' };
+        const body = await readJsonBody(req);
+        if (!LABELS[body.type]) { res.writeHead(400); res.end(JSON.stringify({ error: 'bad type' })); return; }
+
+        const nick = String(body.nick || '').trim();
+        const id = String(body.id || '').trim();
+        const reviewer = String(body.reviewer || '').trim() || user.username || '?';
+        const passed = !!body.passed;
+        const variant = String(body.variant || '').trim();
+        const date = String(body.date || '').trim();
+        if (!nick || !id) { res.writeHead(400); res.end(JSON.stringify({ error: 'nick/id required' })); return; }
+
+        const token = process.env.TELEGRAM_BOT_TOKEN || '';
+        const chatId = process.env.TELEGRAM_REPORTS_CHAT_ID || '';
+        if (!token || !chatId) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Telegram-бот не настроен (нет TELEGRAM_BOT_TOKEN / TELEGRAM_REPORTS_CHAT_ID)' }));
+            return;
+        }
+
+        const lines = [
+            '📋 ' + LABELS[body.type],
+            'Проверяющий: ' + reviewer,
+            'Кандидат: ' + nick + ' (ID: ' + id + ')',
+            'Результат: ' + body.score + (body.maxScore !== undefined ? ' / ' + body.maxScore : '') + ' — ' + (passed ? 'Сдал ✅' : 'Не сдал ❌'),
+        ];
+        if (variant) lines.push('Вариант: ' + variant);
+        if (date) lines.push('Дата: ' + date);
+
+        try {
+            const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text: lines.join('\n') })
+            });
+            if (!resp.ok) {
+                const errText = await resp.text();
+                res.writeHead(502);
+                res.end(JSON.stringify({ error: 'Telegram HTTP ' + resp.status + ': ' + errText.slice(0, 300) }));
+                return;
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
     // === Выговоры ===
     if (pathname === '/api/warnings.php') {
         const user = currentUser(req);

@@ -296,6 +296,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         <button class="cc-submit" id="submitReport" type="button">
                             <i class="fas fa-paper-plane"></i> Отправить отчёт
                         </button>
+                        <span class="cc-tg-status" id="reportTgStatus"></span>
                     </div>
 
                     <div class="variant-tabs">
@@ -351,6 +352,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         <button class="cc-submit" id="mSubmitReport" type="button">
                             <i class="fas fa-paper-plane"></i> Отправить отчёт
                         </button>
+                        <span class="cc-tg-status" id="mReportTgStatus"></span>
                     </div>
 
                     <div class="questions-list" id="mastersInterviewList"></div>
@@ -1240,10 +1242,13 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 });
             }
 
-            // Отправка отчёта
+            // Отправка отчёта — сохраняется локально и параллельно уходит в
+            // Telegram-группу через бота, чтобы отчёт видела вся вышка, а не
+            // только браузер того, кто его отправил.
             const submitBtn = document.getElementById(cfg.submitId);
+            const tgStatus = cfg.reportTgStatusId ? document.getElementById(cfg.reportTgStatusId) : null;
             if (submitBtn) {
-                submitBtn.addEventListener('click', () => {
+                submitBtn.addEventListener('click', async () => {
                     const nick = document.getElementById(cfg.nickId).value.trim();
                     const id = document.getElementById(cfg.idId).value.trim();
                     const reviewer = document.getElementById(cfg.reviewerId).value.trim();
@@ -1276,6 +1281,31 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     localStorage.removeItem(cfg.ratingStorage + currentVariant);
                     render();
                     document.getElementById(cfg.nickId).focus();
+
+                    if (tgStatus && cfg.type) {
+                        tgStatus.textContent = 'Отправляю в Telegram…';
+                        tgStatus.style.color = 'var(--text-secondary)';
+                        try {
+                            const r = await fetch('/api/send-report.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    type: cfg.type, nick, id, reviewer,
+                                    score, maxScore: cfg.maxScore,
+                                    passed: score >= cfg.passingScore,
+                                    variant: cfg.hasVariants ? report.variant : '',
+                                    date: report.date
+                                })
+                            });
+                            const data = await r.json();
+                            if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
+                            tgStatus.textContent = 'Отправлено в Telegram ✓';
+                            tgStatus.style.color = 'var(--ok)';
+                        } catch (e) {
+                            tgStatus.textContent = 'Не ушло в Telegram: ' + e.message;
+                            tgStatus.style.color = 'var(--bad)';
+                        }
+                    }
                 });
             }
 
@@ -1290,7 +1320,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             nickId: 'candNick', idId: 'candId', reviewerId: 'candReviewer',
             submitId: 'submitReport', resetId: 'resetRatings',
             reportsListId: 'reportsList', reportsCountId: 'reportsCount',
-            ratingStorage: 'rate_v', reportsStorage: 'moder_reports'
+            ratingStorage: 'rate_v', reportsStorage: 'moder_reports',
+            type: 'moder', reportTgStatusId: 'reportTgStatus'
         });
         document.querySelectorAll('.variant-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1373,7 +1404,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             nickId: 'mCandNick', idId: 'mCandId', reviewerId: 'mCandReviewer',
             submitId: 'mSubmitReport', resetId: 'mResetRatings',
             reportsListId: 'mReportsList', reportsCountId: 'mReportsCount',
-            ratingStorage: 'm_rate_', reportsStorage: 'master_reports'
+            ratingStorage: 'm_rate_', reportsStorage: 'master_reports',
+            type: 'master', reportTgStatusId: 'mReportTgStatus'
         });
         masterInterview.render();
         masterInterview.renderReports();
