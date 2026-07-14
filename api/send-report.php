@@ -29,6 +29,7 @@ $maxScore = $body['maxScore'] ?? '';
 $passed = !empty($body['passed']);
 $variant = trim((string)($body['variant'] ?? ''));
 $date = trim((string)($body['date'] ?? ''));
+$ratings = is_array($body['ratings'] ?? null) ? $body['ratings'] : [];
 
 if ($nick === '' || $id === '') {
     http_response_code(400);
@@ -49,13 +50,23 @@ function clean_utf8_report($s) {
 }
 
 $lines = [
-    '📋 ' . $LABELS[$type],
+    $LABELS[$type],
     'Проверяющий: ' . clean_utf8_report($reviewer),
     'Кандидат: ' . clean_utf8_report($nick) . ' (ID: ' . $id . ')',
-    'Результат: ' . $score . ($maxScore !== '' ? ' / ' . $maxScore : '') . ' — ' . ($passed ? 'Сдал ✅' : 'Не сдал ❌'),
+    'Результат: ' . $score . ($maxScore !== '' ? ' / ' . $maxScore : '') . ' — ' . ($passed ? 'Сдал' : 'Не сдал'),
 ];
 if ($variant !== '') $lines[] = 'Вариант: ' . clean_utf8_report($variant);
 if ($date !== '') $lines[] = 'Дата: ' . clean_utf8_report($date);
+
+if (count($ratings) > 0) {
+    $keys = array_map('intval', array_keys($ratings));
+    sort($keys);
+    $lines[] = '';
+    foreach ($keys as $k) {
+        $lines[] = ($k + 1) . '. ' . clean_utf8_report($ratings[$k] ?? '');
+    }
+}
+
 $text = implode("\n", $lines);
 
 $ch = curl_init("https://api.telegram.org/bot{$token}/sendMessage");

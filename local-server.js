@@ -722,13 +722,20 @@ const server = http.createServer(async (req, res) => {
         }
 
         const lines = [
-            '📋 ' + LABELS[body.type],
+            LABELS[body.type],
             'Проверяющий: ' + reviewer,
             'Кандидат: ' + nick + ' (ID: ' + id + ')',
-            'Результат: ' + body.score + (body.maxScore !== undefined ? ' / ' + body.maxScore : '') + ' — ' + (passed ? 'Сдал ✅' : 'Не сдал ❌'),
+            'Результат: ' + body.score + (body.maxScore !== undefined ? ' / ' + body.maxScore : '') + ' — ' + (passed ? 'Сдал' : 'Не сдал'),
         ];
         if (variant) lines.push('Вариант: ' + variant);
         if (date) lines.push('Дата: ' + date);
+
+        const ratings = (body.ratings && typeof body.ratings === 'object') ? body.ratings : {};
+        const ratingKeys = Object.keys(ratings).map(Number).sort((a, b) => a - b);
+        if (ratingKeys.length > 0) {
+            lines.push('');
+            ratingKeys.forEach(k => lines.push((k + 1) + '. ' + (ratings[k] || '')));
+        }
 
         try {
             const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {

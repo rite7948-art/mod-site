@@ -1294,12 +1294,13 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                     score, maxScore: cfg.maxScore,
                                     passed: score >= cfg.passingScore,
                                     variant: cfg.hasVariants ? report.variant : '',
-                                    date: report.date
+                                    date: report.date,
+                                    ratings: report.ratings
                                 })
                             });
                             const data = await r.json();
                             if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
-                            tgStatus.textContent = 'Отправлено в Telegram ✓';
+                            tgStatus.textContent = 'Отправлено в Telegram';
                             tgStatus.style.color = 'var(--ok)';
                         } catch (e) {
                             tgStatus.textContent = 'Не ушло в Telegram: ' + e.message;
