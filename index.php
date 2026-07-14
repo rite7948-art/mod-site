@@ -562,35 +562,13 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             </label>
                         </div>
 
-                        <div class="embed-label-row">
-                            <label class="form-label">Заголовок</label>
-                            <span class="embed-char-counter" id="embedTitleCount">0/256</span>
-                        </div>
-                        <input type="text" id="embedTitle" class="form-control" placeholder="Заголовок эмбита" maxlength="256">
+                        <div id="embedCardsContainer"></div>
 
-                        <div class="embed-label-row">
-                            <label class="form-label">Текст</label>
-                            <span class="embed-char-counter" id="embedDescCount">0/4096</span>
-                        </div>
-                        <textarea id="embedDescription" class="form-control" rows="5" placeholder="Текст эмбита" maxlength="4096" style="resize:vertical;"></textarea>
-
-                        <label class="form-label">Картинка (URL, необязательно)</label>
-                        <input type="text" id="embedImage" class="form-control" placeholder="https://...">
-
-                        <label class="form-label">Цвет полоски</label>
-                        <div class="embed-color-row">
-                            <div class="embed-color-swatches" id="embedColorSwatches"></div>
-                            <input type="color" id="embedColorPicker" value="#e5352b" class="embed-color-picker">
-                        </div>
-
-                        <label class="form-label" style="margin-top:0.5rem;">Так будет выглядеть в Discord</label>
-                        <div class="discord-embed-preview">
-                            <div class="discord-embed-bar" id="embedPreviewBar"></div>
-                            <div class="discord-embed-body">
-                                <div class="discord-embed-title" id="embedPreviewTitle"></div>
-                                <div class="discord-embed-desc" id="embedPreviewDesc"></div>
-                                <img class="discord-embed-image" id="embedPreviewImage" style="display:none;" alt="">
-                            </div>
+                        <div class="embed-add-row">
+                            <button class="btn-profile-action" id="embedAddCardBtn" type="button">
+                                <i class="fas fa-plus"></i> Добавить эмбит
+                            </button>
+                            <span class="embed-char-counter" id="embedTotalCounter">0/6000</span>
                         </div>
 
                         <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
@@ -1667,24 +1645,23 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const btn = document.getElementById('embedSendBtn');
             if (!btn) return;
             const btnLabel = document.getElementById('embedSendBtnLabel');
-            const titleInput = document.getElementById('embedTitle');
-            const descInput = document.getElementById('embedDescription');
-            const imageInput = document.getElementById('embedImage');
-            const colorPicker = document.getElementById('embedColorPicker');
-            const swatchesBox = document.getElementById('embedColorSwatches');
             const statusMsg = document.getElementById('embedStatusMsg');
-            const titleCount = document.getElementById('embedTitleCount');
-            const descCount = document.getElementById('embedDescCount');
             const historyList = document.getElementById('embedHistoryList');
             const linkInput = document.getElementById('embedLinkInput');
             const linkLoadBtn = document.getElementById('embedLinkLoadBtn');
             const editingBanner = document.getElementById('embedEditingBanner');
             const editingLink = document.getElementById('embedEditingLink');
             const editingCancelBtn = document.getElementById('embedEditingCancel');
+            const cardsContainer = document.getElementById('embedCardsContainer');
+            const addCardBtn = document.getElementById('embedAddCardBtn');
+            const totalCounterEl = document.getElementById('embedTotalCounter');
 
             const EMBED_GUILD_ID = '531970658633252864';
             const EMBED_CHANNEL_IDS = { master: '1510992131446018139', curator: '1510992164392538163' };
             const CHANNEL_KEY_BY_ID = Object.fromEntries(Object.entries(EMBED_CHANNEL_IDS).map(([k, v]) => [v, k]));
+            const CHANNEL_LABELS = { master: 'Мастера', curator: 'Кураторы' };
+            const PRESET_COLORS = ['#e5352b', '#fbbf24', '#34d399', '#9fb4cc', '#d99cb8', '#5865f2'];
+            const MAX_EMBEDS = 10;
             let editing = null; // { channelId, messageId }
 
             function setChannelRadio(channelKey) {
@@ -1692,14 +1669,135 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 if (radio) radio.checked = true;
             }
 
-            function enterEditMode(channelKey, channelId, messageId, data) {
-                editing = { channelId, messageId };
+            function updateCounter(el, len, max) {
+                el.textContent = len + '/' + max;
+                el.classList.toggle('is-near-limit', len > max * 0.9);
+            }
+
+            function collectEmbeds() {
+                return [...cardsContainer.querySelectorAll('.embed-card')].map(c => ({
+                    title: c.querySelector('[data-role="title"]').value.trim(),
+                    description: c.querySelector('[data-role="description"]').value.trim(),
+                    image: c.querySelector('[data-role="image"]').value.trim(),
+                    color: c.querySelector('[data-role="color"]').value,
+                }));
+            }
+
+            function updateTotalCounter() {
+                const total = collectEmbeds().reduce((sum, e) => sum + e.title.length + e.description.length, 0);
+                updateCounter(totalCounterEl, total, 6000);
+            }
+
+            function renumberCards() {
+                const cards = [...cardsContainer.querySelectorAll('.embed-card')];
+                cards.forEach((c, i) => {
+                    c.querySelector('.embed-card-num').textContent = 'Эмбит ' + (i + 1);
+                    c.querySelector('.embed-card-remove').style.display = cards.length > 1 ? '' : 'none';
+                });
+                addCardBtn.disabled = cards.length >= MAX_EMBEDS;
+            }
+
+            function createCard(data) {
+                data = data || {};
+                const el = document.createElement('div');
+                el.className = 'embed-card';
+                el.innerHTML = `
+                    <div class="embed-card-head">
+                        <span class="embed-card-num"></span>
+                        <button class="embed-card-remove" type="button" title="Удалить эмбит"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <div class="embed-label-row">
+                        <label class="form-label">Заголовок</label>
+                        <span class="embed-char-counter" data-role="titleCount">0/256</span>
+                    </div>
+                    <input type="text" class="form-control" data-role="title" maxlength="256" placeholder="Заголовок эмбита">
+                    <div class="embed-label-row">
+                        <label class="form-label">Текст</label>
+                        <span class="embed-char-counter" data-role="descCount">0/4096</span>
+                    </div>
+                    <textarea class="form-control" data-role="description" rows="4" maxlength="4096" style="resize:vertical;" placeholder="Текст эмбита"></textarea>
+                    <label class="form-label">Картинка (URL, необязательно)</label>
+                    <input type="text" class="form-control" data-role="image" placeholder="https://...">
+                    <label class="form-label">Цвет полоски</label>
+                    <div class="embed-color-row">
+                        <div class="embed-color-swatches" data-role="swatches"></div>
+                        <input type="color" class="embed-color-picker" data-role="color" value="#e5352b">
+                    </div>
+                    <label class="form-label" style="margin-top:0.5rem;">Так будет выглядеть в Discord</label>
+                    <div class="discord-embed-preview" data-role="preview">
+                        <div class="discord-embed-bar" data-role="previewBar"></div>
+                        <div class="discord-embed-body">
+                            <div class="discord-embed-title" data-role="previewTitle"></div>
+                            <div class="discord-embed-desc" data-role="previewDesc"></div>
+                            <img class="discord-embed-image" data-role="previewImage" style="display:none;" alt="">
+                        </div>
+                    </div>`;
+
+                const titleInput = el.querySelector('[data-role="title"]');
+                const descInput = el.querySelector('[data-role="description"]');
+                const imageInput = el.querySelector('[data-role="image"]');
+                const colorPicker = el.querySelector('[data-role="color"]');
+                const swatchesBox = el.querySelector('[data-role="swatches"]');
+                const titleCount = el.querySelector('[data-role="titleCount"]');
+                const descCount = el.querySelector('[data-role="descCount"]');
+                const previewBar = el.querySelector('[data-role="previewBar"]');
+                const previewTitle = el.querySelector('[data-role="previewTitle"]');
+                const previewDesc = el.querySelector('[data-role="previewDesc"]');
+                const previewImage = el.querySelector('[data-role="previewImage"]');
+
                 titleInput.value = data.title || '';
                 descInput.value = data.description || '';
                 imageInput.value = data.image || '';
                 colorPicker.value = data.color || '#e5352b';
+
+                swatchesBox.innerHTML = PRESET_COLORS.map(c =>
+                    `<button type="button" class="embed-swatch" data-color="${c}" style="background:${c};"></button>`
+                ).join('');
+                swatchesBox.querySelectorAll('.embed-swatch').forEach(sw => {
+                    sw.addEventListener('click', () => { colorPicker.value = sw.dataset.color; refreshCard(); });
+                });
+
+                function refreshCard() {
+                    previewBar.style.background = colorPicker.value;
+                    previewTitle.textContent = titleInput.value || 'Заголовок';
+                    previewTitle.style.opacity = titleInput.value ? '1' : '0.4';
+                    previewDesc.textContent = descInput.value || 'Текст эмбита появится здесь…';
+                    previewDesc.style.opacity = descInput.value ? '1' : '0.4';
+                    const img = imageInput.value.trim();
+                    if (img) { previewImage.src = img; previewImage.style.display = 'block'; }
+                    else previewImage.style.display = 'none';
+                    updateCounter(titleCount, titleInput.value.length, 256);
+                    updateCounter(descCount, descInput.value.length, 4096);
+                    updateTotalCounter();
+                }
+                [titleInput, descInput, imageInput, colorPicker].forEach(inp => inp.addEventListener('input', refreshCard));
+                refreshCard();
+
+                el.querySelector('.embed-card-remove').addEventListener('click', () => {
+                    el.remove();
+                    renumberCards();
+                    updateTotalCounter();
+                });
+
+                return el;
+            }
+
+            function addCard(data) {
+                cardsContainer.appendChild(createCard(data));
+                renumberCards();
+                updateTotalCounter();
+            }
+            function loadCards(list) {
+                cardsContainer.innerHTML = '';
+                (list && list.length ? list : [{}]).forEach(addCard);
+            }
+            addCardBtn.addEventListener('click', () => addCard());
+            loadCards();
+
+            function enterEditMode(channelKey, channelId, messageId, embeds) {
+                editing = { channelId, messageId };
+                loadCards(embeds);
                 setChannelRadio(channelKey);
-                updatePreview();
                 btnLabel.textContent = 'Сохранить изменения';
                 editingLink.href = `https://discord.com/channels/${EMBED_GUILD_ID}/${channelId}/${messageId}`;
                 editingBanner.style.display = 'flex';
@@ -1713,8 +1811,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             }
             editingCancelBtn.addEventListener('click', () => {
                 exitEditMode();
-                titleInput.value = ''; descInput.value = ''; imageInput.value = '';
-                updatePreview();
+                loadCards();
             });
 
             linkLoadBtn.addEventListener('click', async () => {
@@ -1738,7 +1835,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     const r = await fetch(`/api/edit-embed.php?channel_id=${channelId}&message_id=${messageId}`);
                     const data = await r.json();
                     if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
-                    enterEditMode(channelKey, channelId, messageId, data);
+                    enterEditMode(channelKey, channelId, messageId, data.embeds);
                 } catch (e) {
                     statusMsg.textContent = 'Ошибка: ' + e.message;
                     statusMsg.style.color = 'var(--bad)';
@@ -1747,61 +1844,30 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 }
             });
 
-            const previewBar = document.getElementById('embedPreviewBar');
-            const previewTitle = document.getElementById('embedPreviewTitle');
-            const previewDesc = document.getElementById('embedPreviewDesc');
-            const previewImage = document.getElementById('embedPreviewImage');
-
-            const PRESET_COLORS = ['#e5352b', '#fbbf24', '#34d399', '#9fb4cc', '#d99cb8', '#5865f2'];
-            swatchesBox.innerHTML = PRESET_COLORS.map(c =>
-                `<button type="button" class="embed-swatch" data-color="${c}" style="background:${c};"></button>`
-            ).join('');
-            swatchesBox.querySelectorAll('.embed-swatch').forEach(sw => {
-                sw.addEventListener('click', () => { colorPicker.value = sw.dataset.color; updatePreview(); });
-            });
-
-            function updateCounter(el, input, max) {
-                const len = input.value.length;
-                el.textContent = len + '/' + max;
-                el.classList.toggle('is-near-limit', len > max * 0.9);
-            }
-
-            function updatePreview() {
-                previewBar.style.background = colorPicker.value;
-                previewTitle.textContent = titleInput.value || 'Заголовок';
-                previewTitle.style.opacity = titleInput.value ? '1' : '0.4';
-                previewDesc.textContent = descInput.value || 'Текст эмбита появится здесь…';
-                previewDesc.style.opacity = descInput.value ? '1' : '0.4';
-                const img = imageInput.value.trim();
-                if (img) {
-                    previewImage.src = img;
-                    previewImage.style.display = 'block';
-                } else {
-                    previewImage.style.display = 'none';
-                }
-                updateCounter(titleCount, titleInput, 256);
-                updateCounter(descCount, descInput, 4096);
-            }
-            [titleInput, descInput, imageInput, colorPicker].forEach(el => el.addEventListener('input', updatePreview));
-            updatePreview();
-
             // --- История последних отправленных — с возможностью повторить как шаблон ---
-            const CHANNEL_LABELS = { master: 'Мастера', curator: 'Кураторы' };
             let historyItems = [];
 
+            function itemEmbeds(item) {
+                return (item.embeds && item.embeds.length) ? item.embeds
+                    : [{ title: item.title, description: item.description, image: item.image, color: item.color }];
+            }
+
             function historyItemHTML(item, idx) {
+                const embeds = itemEmbeds(item);
+                const first = embeds[0] || {};
                 const label = CHANNEL_LABELS[item.channel] || item.channel;
                 const when = item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '';
                 const editedNote = item.edited_at ? ` <span title="Отредактировано">(ред. ${escapeHtml(item.edited_by || '')})</span>` : '';
+                const countBadge = embeds.length > 1 ? ` <span class="embed-history-count">+${embeds.length - 1}</span>` : '';
                 const editBtn = item.message_id ? `
                         <button class="embed-history-repeat" data-idx="${idx}" data-action="edit" type="button" title="Изменить это сообщение">
                             <i class="fas fa-pen"></i>
                         </button>` : '';
                 return `
                     <div class="embed-history-item">
-                        <div class="embed-history-dot" style="background:${escapeHtml(item.color || '#e5352b')};"></div>
+                        <div class="embed-history-dot" style="background:${escapeHtml(first.color || '#e5352b')};"></div>
                         <div class="embed-history-main">
-                            <div class="embed-history-title">${escapeHtml(item.title || item.description || '(без текста)')}</div>
+                            <div class="embed-history-title">${escapeHtml(first.title || first.description || '(без текста)')}${countBadge}</div>
                             <div class="embed-history-meta">
                                 <span class="warn-cat-${item.channel === 'curator' ? 'curator' : 'master'}">${escapeHtml(label)}</span>
                                 <span>${escapeHtml(item.sent_by || '—')}</span>
@@ -1830,17 +1896,14 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         b.addEventListener('click', () => {
                             const item = historyItems[+b.dataset.idx];
                             if (!item) return;
+                            const embeds = itemEmbeds(item);
                             if (b.dataset.action === 'edit' && item.message_id && item.channel_id) {
-                                enterEditMode(item.channel, item.channel_id, item.message_id, item);
+                                enterEditMode(item.channel, item.channel_id, item.message_id, embeds);
                                 return;
                             }
                             exitEditMode();
-                            titleInput.value = item.title || '';
-                            descInput.value = item.description || '';
-                            imageInput.value = item.image || '';
-                            colorPicker.value = item.color || '#e5352b';
+                            loadCards(embeds);
                             setChannelRadio(item.channel);
-                            updatePreview();
                             statusMsg.textContent = 'Заполнено из истории — проверь текст и отправляй.';
                             statusMsg.style.color = 'var(--text-secondary)';
                         });
@@ -1852,10 +1915,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             fetchEmbedHistory();
 
             btn.addEventListener('click', async () => {
-                const title = titleInput.value.trim();
-                const description = descInput.value.trim();
-                if (!title && !description) {
-                    statusMsg.textContent = 'Заполни заголовок или текст.';
+                const embeds = collectEmbeds().filter(e => e.title || e.description);
+                if (embeds.length === 0) {
+                    statusMsg.textContent = 'Заполни хотя бы один эмбит (заголовок или текст).';
                     statusMsg.style.color = 'var(--bad)';
                     return;
                 }
@@ -1866,8 +1928,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 try {
                     const url = editing ? '/api/edit-embed.php' : '/api/send-embed.php';
                     const payload = editing
-                        ? { channel_id: editing.channelId, message_id: editing.messageId, title, description, image: imageInput.value.trim(), color: colorPicker.value }
-                        : { channel, title, description, image: imageInput.value.trim(), color: colorPicker.value };
+                        ? { channel_id: editing.channelId, message_id: editing.messageId, embeds }
+                        : { channel, embeds };
                     const r = await fetch(url, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1878,8 +1940,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     statusMsg.textContent = editing ? 'Изменено ✓' : 'Отправлено ✓';
                     statusMsg.style.color = 'var(--ok)';
                     exitEditMode();
-                    titleInput.value = ''; descInput.value = ''; imageInput.value = '';
-                    updatePreview();
+                    loadCards();
                     fetchEmbedHistory();
                 } catch (e) {
                     statusMsg.textContent = 'Ошибка: ' + e.message;

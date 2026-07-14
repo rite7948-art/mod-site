@@ -1,5 +1,6 @@
 <?php
-// Изменение уже отправленного эмбита в одном из двух инфо-каналов.
+// Изменение уже отправленного сообщения (1-10 эмбитов) в одном из двух
+// инфо-каналов.
 // GET  — подтягивает текущее содержимое сообщения (по ссылке пользователь
 //        мог вставить чужую правку, которую сайт ещё не видел).
 // POST — применяет правки через PATCH к тому же сообщению.
@@ -7,6 +8,7 @@
 // протащить произвольный канал/сообщение.
 session_start();
 header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/_embeds_shared.php';
 
 if (empty($_SESSION['user_logged_in'])) {
     http_response_code(401);
@@ -24,10 +26,7 @@ if (role_level_local_edit($_SESSION['role'] ?? '') < 2) {
     exit;
 }
 
-$EMBED_CHANNELS = [
-    'master'  => '1510992131446018139',
-    'curator' => '1510992164392538163',
-];
+$EMBED_CHANNELS = embed_channels();
 $channelKeyById = array_flip($EMBED_CHANNELS);
 
 $token = getenv('DISCORD_TOKEN') ?: '';
@@ -35,10 +34,6 @@ if (!$token) {
     http_response_code(500);
     echo json_encode(['error' => 'DISCORD_TOKEN не настроен']);
     exit;
-}
-
-function clean_utf8_edit($s) {
-    return mb_convert_encoding((string)$s, 'UTF-8', 'UTF-8');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -65,15 +60,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     $msg = json_decode((string)$resp, true) ?: [];
-    $embed = ($msg['embeds'][0] ?? null);
+    $rawEmbeds = is_array($msg['embeds'] ?? null) ? $msg['embeds'] : [];
+    $embeds = array_map(function ($e) {
+        return [
+            'title' => $e['title'] ?? '',
+            'description' => $e['description'] ?? '',
+            'image' => $e['image']['url'] ?? '',
+            'color' => isset($e['color']) ? ('#' . str_pad(dechex($e['color']), 6, '0', STR_PAD_LEFT)) : '#e5352b',
+        ];
+    }, $rawEmbeds);
+    if (count($embeds) === 0) $embeds = [['title' => '', 'description' => '', 'image' => '', 'color' => '#e5352b']];
+
     echo json_encode([
         'channel' => $channelKeyById[$channelId],
         'channel_id' => $channelId,
         'message_id' => $messageId,
-        'title' => $embed['title'] ?? '',
-        'description' => $embed['description'] ?? '',
-        'image' => $embed['image']['url'] ?? '',
-        'color' => $embed && isset($embed['color']) ? ('#' . str_pad(dechex($embed['color']), 6, '0', STR_PAD_LEFT)) : '#e5352b',
+        'embeds' => $embeds,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -88,26 +90,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $title = mb_substr(clean_utf8_edit(trim((string)($body['title'] ?? ''))), 0, 256);
-    $description = mb_substr(clean_utf8_edit(trim((string)($body['description'] ?? ''))), 0, 4096);
-    $image = trim((string)($body['image'] ?? ''));
-    if ($title === '' && $description === '') {
+    $username = $_SESSION['username'] ?? '?';
+    [$discordEmbeds, $cleaned, $error] = build_discord_embeds($body['embeds'] ?? [], 'Отредактировал', $username);
+    if ($error) {
         http_response_code(400);
-        echo json_encode(['error' => 'empty embed']);
+        echo json_encode(['error' => $error]);
         exit;
     }
-
-    $color = 0xe5352b;
-    if (preg_match('/^#[0-9a-fA-F]{6}$/', (string)($body['color'] ?? ''))) {
-        $color = hexdec(substr($body['color'], 1));
-    }
-
-    $embed = ['color' => $color];
-    if ($title !== '') $embed['title'] = $title;
-    if ($description !== '') $embed['description'] = $description;
-    if ($image !== '' && preg_match('#^https?://#i', $image)) $embed['image'] = ['url' => $image];
-    $embed['footer'] = ['text' => 'Отредактировал ' . ($_SESSION['username'] ?? '?')];
-    $embed['timestamp'] = gmdate('c');
 
     $ch = curl_init("https://discord.com/api/v10/channels/{$channelId}/messages/{$messageId}");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -116,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'Authorization: Bot ' . $token,
         'Content-Type: application/json',
     ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['embeds' => [$embed]], JSON_UNESCAPED_UNICODE));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['embeds' => $discordEmbeds], JSON_UNESCAPED_UNICODE));
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     $resp = curl_exec($ch);
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -135,11 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $log['items'] = is_array($log['items'] ?? null) ? $log['items'] : [];
     foreach ($log['items'] as &$item) {
         if (($item['message_id'] ?? null) === $messageId) {
-            $item['title'] = $title;
-            $item['description'] = $description;
-            $item['image'] = $image;
-            $item['color'] = (string)($body['color'] ?? '#e5352b');
-            $item['edited_by'] = $_SESSION['username'] ?? '';
+            $item['embeds'] = $cleaned;
+            $item['edited_by'] = $username;
             $item['edited_at'] = gmdate('c');
         }
     }

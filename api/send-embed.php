@@ -1,11 +1,12 @@
 <?php
-// Отправка эмбита в один из двух официальных инфо-каналов от имени бота.
-// Обычный REST-запрос к Discord API токеном бота — селфбот/Node-сервис
-// тут не нужны. Каналы жёстко зашиты списком, клиент выбирает только ключ
-// ('master'/'curator'), не сырой channel_id — чтобы нельзя было запостить
-// в произвольный канал.
+// Отправка одного или нескольких эмбитов (до 10, как позволяет Discord) в
+// один из двух официальных инфо-каналов от имени бота. Обычный REST-запрос
+// токеном бота — селфбот/Node-сервис тут не нужны. Каналы жёстко зашиты
+// списком, клиент выбирает только ключ ('master'/'curator'), не сырой
+// channel_id — чтобы нельзя было запостить в произвольный канал.
 session_start();
 header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/_embeds_shared.php';
 
 if (empty($_SESSION['user_logged_in'])) {
     http_response_code(401);
@@ -23,10 +24,7 @@ if (role_level_local($_SESSION['role'] ?? '') < 2) {
     exit;
 }
 
-$EMBED_CHANNELS = [
-    'master'  => '1510992131446018139',
-    'curator' => '1510992164392538163',
-];
+$EMBED_CHANNELS = embed_channels();
 
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
 $channelKey = (string)($body['channel'] ?? '');
@@ -37,27 +35,13 @@ if (!$channelId) {
     exit;
 }
 
-$title = mb_substr(trim((string)($body['title'] ?? '')), 0, 256);
-$description = mb_substr(trim((string)($body['description'] ?? '')), 0, 4096);
-$image = trim((string)($body['image'] ?? ''));
-
-if ($title === '' && $description === '') {
+$username = $_SESSION['username'] ?? '?';
+[$discordEmbeds, $cleaned, $error] = build_discord_embeds($body['embeds'] ?? [], 'Опубликовал', $username);
+if ($error) {
     http_response_code(400);
-    echo json_encode(['error' => 'empty embed']);
+    echo json_encode(['error' => $error]);
     exit;
 }
-
-$color = 0xe5352b;
-if (preg_match('/^#[0-9a-fA-F]{6}$/', (string)($body['color'] ?? ''))) {
-    $color = hexdec(substr($body['color'], 1));
-}
-
-$embed = ['color' => $color];
-if ($title !== '') $embed['title'] = $title;
-if ($description !== '') $embed['description'] = $description;
-if ($image !== '' && preg_match('#^https?://#i', $image)) $embed['image'] = ['url' => $image];
-$embed['footer'] = ['text' => 'Опубликовал ' . ($_SESSION['username'] ?? '?')];
-$embed['timestamp'] = gmdate('c');
 
 $token = getenv('DISCORD_TOKEN') ?: '';
 if (!$token) {
@@ -73,7 +57,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Authorization: Bot ' . $token,
     'Content-Type: application/json',
 ]);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['embeds' => [$embed]], JSON_UNESCAPED_UNICODE));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['embeds' => $discordEmbeds], JSON_UNESCAPED_UNICODE));
 curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 $resp = curl_exec($ch);
 $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -96,11 +80,8 @@ $log['items'][] = [
     'channel' => $channelKey,
     'channel_id' => $channelId,
     'message_id' => $sentMessage['id'] ?? null,
-    'title' => $title,
-    'description' => $description,
-    'image' => $image,
-    'color' => (string)($body['color'] ?? '#e5352b'),
-    'sent_by' => $_SESSION['username'] ?? '',
+    'embeds' => $cleaned,
+    'sent_by' => $username,
     'created_at' => gmdate('c'),
 ];
 if (count($log['items']) > 30) $log['items'] = array_slice($log['items'], -30);

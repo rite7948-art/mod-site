@@ -37,6 +37,43 @@ function loadEmbedsLog() {
         return { next_id: d.next_id || 1, items: Array.isArray(d.items) ? d.items : [] };
     } catch { return { next_id: 1, items: [] }; }
 }
+// Приводит сырой ввод клиента (массив {title,description,image,color}) к
+// массиву настоящих Discord-эмбитов (до 10, суммарно не больше 6000
+// символов) + пишет footer/timestamp на каждый. Возвращает { embeds, cleaned, error }.
+function buildDiscordEmbeds(rawEmbeds, footerVerb, username) {
+    if (!Array.isArray(rawEmbeds) || rawEmbeds.length === 0) {
+        return { error: 'нужен хотя бы один эмбит' };
+    }
+    if (rawEmbeds.length > 10) {
+        return { error: 'в одном сообщении можно максимум 10 эмбитов' };
+    }
+    const embeds = [];
+    const cleaned = [];
+    let totalLen = 0;
+    for (const raw of rawEmbeds) {
+        const title = String(raw.title || '').trim().slice(0, 256);
+        const description = String(raw.description || '').trim().slice(0, 4096);
+        const image = String(raw.image || '').trim();
+        if (!title && !description) return { error: 'у каждого эмбита должен быть заголовок или текст' };
+        totalLen += title.length + description.length;
+
+        let color = 0xe5352b;
+        const colorHex = String(raw.color || '#e5352b');
+        if (/^#[0-9a-fA-F]{6}$/.test(colorHex)) color = parseInt(colorHex.slice(1), 16);
+
+        const embed = { color };
+        if (title) embed.title = title;
+        if (description) embed.description = description;
+        if (image && /^https?:\/\//.test(image)) embed.image = { url: image };
+        embed.footer = { text: footerVerb + ' ' + username };
+        embed.timestamp = new Date().toISOString();
+        embeds.push(embed);
+        cleaned.push({ title, description, image, color: colorHex });
+    }
+    if (totalLen > 6000) return { error: `суммарно текст всех эмбитов превышает 6000 символов (${totalLen})` };
+    return { embeds, cleaned };
+}
+
 function appendEmbedsLog(entry) {
     const data = loadEmbedsLog();
     entry.id = data.next_id++;
@@ -531,20 +568,8 @@ const server = http.createServer(async (req, res) => {
         const channelId = EMBED_CHANNELS[body.channel];
         if (!channelId) { res.writeHead(400); res.end(JSON.stringify({ error: 'bad channel' })); return; }
 
-        const title = String(body.title || '').slice(0, 256);
-        const description = String(body.description || '').slice(0, 4096);
-        const image = String(body.image || '').trim();
-        if (!title && !description) { res.writeHead(400); res.end(JSON.stringify({ error: 'empty embed' })); return; }
-
-        let color = 0xe5352b;
-        if (/^#[0-9a-fA-F]{6}$/.test(body.color || '')) color = parseInt(body.color.slice(1), 16);
-
-        const embed = { color };
-        if (title) embed.title = title;
-        if (description) embed.description = description;
-        if (image && /^https?:\/\//.test(image)) embed.image = { url: image };
-        embed.footer = { text: 'Опубликовал ' + (user.username || '?') };
-        embed.timestamp = new Date().toISOString();
+        const { embeds, cleaned, error } = buildDiscordEmbeds(body.embeds || [], 'Опубликовал', user.username || '?');
+        if (error) { res.writeHead(400); res.end(JSON.stringify({ error })); return; }
 
         try {
             const discordToken = process.env.DISCORD_TOKEN || '';
@@ -552,7 +577,7 @@ const server = http.createServer(async (req, res) => {
             const resp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
                 method: 'POST',
                 headers: { 'Authorization': 'Bot ' + discordToken, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
+                body: JSON.stringify({ embeds })
             });
             if (!resp.ok) {
                 const errText = await resp.text();
@@ -563,7 +588,7 @@ const server = http.createServer(async (req, res) => {
                 channel: body.channel,
                 channel_id: channelId,
                 message_id: sentMessage.id || null,
-                title, description, image, color: body.color || '#e5352b',
+                embeds: cleaned,
                 sent_by: user.username || '',
                 created_at: new Date().toISOString(),
             });
@@ -615,12 +640,14 @@ const server = http.createServer(async (req, res) => {
                     return;
                 }
                 const msg = await resp.json();
-                const embed = (msg.embeds && msg.embeds[0]) || {};
-                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end(JSON.stringify({
-                    channel: channelKeyById[channelId], channel_id: channelId, message_id: messageId,
+                const rawEmbeds = Array.isArray(msg.embeds) ? msg.embeds : [];
+                const embeds = rawEmbeds.length ? rawEmbeds.map(embed => ({
                     title: embed.title || '', description: embed.description || '', image: (embed.image && embed.image.url) || '',
                     color: embed.color != null ? ('#' + embed.color.toString(16).padStart(6, '0')) : '#e5352b',
+                })) : [{ title: '', description: '', image: '', color: '#e5352b' }];
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({
+                    channel: channelKeyById[channelId], channel_id: channelId, message_id: messageId, embeds,
                 }));
             } catch (e) {
                 res.writeHead(502); res.end(JSON.stringify({ error: e.message }));
@@ -635,24 +662,14 @@ const server = http.createServer(async (req, res) => {
         if (!channelKeyById[channelId] || !/^\d{15,22}$/.test(messageId)) {
             res.writeHead(400); res.end(JSON.stringify({ error: 'это не ссылка на инфо-канал' })); return;
         }
-        const title = String(body.title || '').trim().slice(0, 256);
-        const description = String(body.description || '').trim().slice(0, 4096);
-        const image = String(body.image || '').trim();
-        if (!title && !description) { res.writeHead(400); res.end(JSON.stringify({ error: 'empty embed' })); return; }
-        let color = 0xe5352b;
-        if (/^#[0-9a-fA-F]{6}$/.test(body.color || '')) color = parseInt(body.color.slice(1), 16);
-        const embed = { color };
-        if (title) embed.title = title;
-        if (description) embed.description = description;
-        if (image && /^https?:\/\//.test(image)) embed.image = { url: image };
-        embed.footer = { text: 'Отредактировал ' + (user.username || '?') };
-        embed.timestamp = new Date().toISOString();
+        const { embeds, cleaned, error } = buildDiscordEmbeds(body.embeds || [], 'Отредактировал', user.username || '?');
+        if (error) { res.writeHead(400); res.end(JSON.stringify({ error })); return; }
 
         try {
             const resp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': 'Bot ' + discordToken, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
+                body: JSON.stringify({ embeds })
             });
             if (!resp.ok) {
                 const errText = await resp.text();
@@ -663,8 +680,7 @@ const server = http.createServer(async (req, res) => {
             const log = loadEmbedsLog();
             for (const item of log.items) {
                 if (item.message_id === messageId) {
-                    item.title = title; item.description = description; item.image = image;
-                    item.color = body.color || '#e5352b';
+                    item.embeds = cleaned;
                     item.edited_by = user.username || '';
                     item.edited_at = new Date().toISOString();
                 }
