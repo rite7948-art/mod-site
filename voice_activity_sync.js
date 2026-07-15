@@ -125,6 +125,14 @@ client.on('ready', async () => {
         const store = loadStore();
         const isFirstRun = !store.last_message_id;
 
+        // Досчитываем название комнаты для сессий, открытых до того, как оно
+        // стало частью формата хранения — иначе так и останутся пустыми.
+        for (const sess of Object.values(store.open_sessions)) {
+            if (!sess.channelName && roomNameById.has(sess.channelId)) {
+                sess.channelName = roomNameById.get(sess.channelId);
+            }
+        }
+
         const messages = isFirstRun
             ? [...(await logChannel.messages.fetch({ limit: 100 })).values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp)
             : await fetchNewMessages(logChannel, store.last_message_id);
