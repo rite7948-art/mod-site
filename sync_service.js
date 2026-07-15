@@ -131,6 +131,113 @@ function checkAuth(req, res) {
     return true;
 }
 
+// === Активность в голосовых "Комнатах" ===
+const VOICE_ACTIVITY_PATH = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(ROOT, 'voice_activity.json');
+const VOICE_SYNC_SCRIPT = path.join(ROOT, 'voice_activity_sync.js');
+const VOICE_SYNC_INTERVAL_MS = Number(process.env.VOICE_SYNC_INTERVAL_MS || 5 * 60 * 1000);
+const VOICE_SYNC_MIN_GAP_MS = 60000; // не чаще раза в минуту по запросу с сайта
+let voiceSyncInFlight = null;
+let voiceLastSyncError = null;
+
+function loadVoiceStore() {
+    try { return JSON.parse(fs.readFileSync(VOICE_ACTIVITY_PATH, 'utf8')); } catch { return {}; }
+}
+function voiceIsoWeekKey(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = (d.getUTCDay() + 6) % 7;
+    d.setUTCDate(d.getUTCDate() - dayNum + 3);
+    const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const weekNum = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+    return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
+function voiceMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+function voiceDayKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+function voiceCurrentWeekDates() {
+    const now = new Date();
+    const dayNum = (now.getDay() + 6) % 7; // 0=Пн..6=Вс
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayNum);
+    const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    return labels.map((label, i) => {
+        const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+        return { key: voiceDayKey(d), label };
+    });
+}
+function voiceClock(ms) {
+    const d = new Date(ms);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function voiceDuration(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m > 0 ? `${m} м ${s} с` : `${s} с`;
+}
+
+// Запускает короткий прогон селфбота (login → разбор новых сообщений лога →
+// logout), не чаще раза в минуту, и не параллельно самому себе.
+function runVoiceActivitySync(callback) {
+    const store = loadVoiceStore();
+    const now = Date.now();
+    if (voiceSyncInFlight) { voiceSyncInFlight.then(callback); return; }
+    if (now - (store.last_synced_at || 0) < VOICE_SYNC_MIN_GAP_MS) { callback(); return; }
+
+    voiceSyncInFlight = new Promise(resolve => {
+        execFile('node', [VOICE_SYNC_SCRIPT], { cwd: ROOT, timeout: 120000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout) => {
+            voiceLastSyncError = null;
+            try {
+                const parsed = JSON.parse((stdout || '').trim().split('\n').pop());
+                if (parsed && parsed.error) voiceLastSyncError = parsed.error;
+            } catch { /* нет распарсиваемого вывода — не критично */ }
+            const fresh = loadVoiceStore();
+            fresh.last_synced_at = Date.now();
+            fs.writeFileSync(VOICE_ACTIVITY_PATH, JSON.stringify(fresh, null, 2));
+            voiceSyncInFlight = null;
+            resolve();
+        });
+    });
+    voiceSyncInFlight.then(callback);
+}
+
+function buildVoiceActivityResponse() {
+    const store = loadVoiceStore();
+    const weekKey = voiceIsoWeekKey(new Date());
+    const mKey = voiceMonthKey(new Date());
+    const weekDates = voiceCurrentWeekDates();
+    const todayKey = voiceDayKey(new Date());
+    const totals = store.totals || {};
+    const roster = store.moderator_roster || {};
+    // Полный список текущих модеров, а не только тех, у кого уже была
+    // активность — иначе на виду только занятые, а те, кто вообще не
+    // заходил, незаметны.
+    const ids = new Set([...Object.keys(roster), ...Object.keys(totals)]);
+    const leaderboard = [...ids].map(id => {
+        const t = totals[id] || {};
+        const sessionsToday = (t.sessions || [])
+            .filter(s => voiceDayKey(new Date(s.from)) === todayKey)
+            .map(s => ({ from: voiceClock(s.from), to: voiceClock(s.to), duration: voiceDuration(s.seconds) }));
+        return {
+            id, nick: roster[id] || t.nick || id,
+            week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
+            month_seconds: (t.months && t.months[mKey]) || 0,
+            days: weekDates.map(wd => ({ label: wd.label, seconds: (t.days && t.days[wd.key]) || 0 })),
+            sessions_today: sessionsToday,
+        };
+    }).sort((a, b) => b.week_seconds - a.week_seconds);
+    const openSessions = store.open_sessions || {};
+    const online = Object.entries(openSessions).map(([id, s]) => ({
+        id, nick: s.nick || id, channel_name: s.channelName || '', since: s.since,
+    })).sort((a, b) => a.since - b.since);
+    return { leaderboard, online, synced_at: store.last_synced_at || null, sync_error: voiceLastSyncError };
+}
+
+// Крутим синк по таймеру независимо от запросов с сайта — данные копятся
+// сами, а не только когда кто-то открыл вкладку "Активность".
+setInterval(() => runVoiceActivitySync(() => {}), VOICE_SYNC_INTERVAL_MS);
+runVoiceActivitySync(() => {});
+
 const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, `http://${req.headers.host}`);
     const pathname = u.pathname;
@@ -205,87 +312,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Активность в голосовых "Комнатах" — накопленное время за неделю/месяц,
-    // разбор ведёт voice_activity_sync.js (селфбот, короткий прогон на
-    // каждый вызов, не чаще раза в минуту).
+    // разбор ведёт voice_activity_sync.js (селфбот, короткий прогон). Помимо
+    // отклика на запрос сайта, тот же прогон крутится по таймеру (см. низ
+    // файла), чтобы данные копились сами, а не только когда кто-то открыл вкладку.
     if (pathname === '/voice-activity' && req.method === 'GET') {
         if (!checkAuth(req, res)) return;
-
-        const storePath = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(ROOT, 'voice_activity.json');
-        function loadVoiceStore() {
-            try { return JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch { return {}; }
-        }
-        function isoWeekKey(date) {
-            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-            const dayNum = (d.getUTCDay() + 6) % 7;
-            d.setUTCDate(d.getUTCDate() - dayNum + 3);
-            const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-            const weekNum = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
-            return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
-        }
-        function monthKey(date) {
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        }
-        function dayKey(date) {
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        }
-        function currentWeekDates() {
-            const now = new Date();
-            const dayNum = (now.getDay() + 6) % 7; // 0=Пн..6=Вс
-            const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayNum);
-            const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-            return labels.map((label, i) => {
-                const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-                return { key: dayKey(d), label };
-            });
-        }
-
-        let store = loadVoiceStore();
-        const now = Date.now();
-        const lastSyncedAt = store.last_synced_at || 0;
-        let syncError = null;
-
-        const respond = () => {
-            const weekKey = isoWeekKey(new Date());
-            const mKey = monthKey(new Date());
-            const weekDates = currentWeekDates();
-            const totals = store.totals || {};
-            const roster = store.moderator_roster || {};
-            // Полный список текущих модеров, а не только тех, у кого уже
-            // была активность — иначе на виду только занятые, а те, кто
-            // вообще не заходил, незаметны.
-            const ids = new Set([...Object.keys(roster), ...Object.keys(totals)]);
-            const leaderboard = [...ids].map(id => {
-                const t = totals[id] || {};
-                return {
-                    id, nick: roster[id] || t.nick || id,
-                    week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
-                    month_seconds: (t.months && t.months[mKey]) || 0,
-                    days: weekDates.map(wd => ({ label: wd.label, seconds: (t.days && t.days[wd.key]) || 0 })),
-                };
-            }).sort((a, b) => b.week_seconds - a.week_seconds);
-            const openSessions = store.open_sessions || {};
-            const online = Object.entries(openSessions).map(([id, s]) => ({
-                id, nick: s.nick || id, channel_name: s.channelName || '', since: s.since,
-            })).sort((a, b) => a.since - b.since);
+        runVoiceActivitySync(() => {
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify({ leaderboard, online, synced_at: store.last_synced_at || null, sync_error: syncError }));
-        };
-
-        if (now - lastSyncedAt > 60000) {
-            const scriptPath = path.join(ROOT, 'voice_activity_sync.js');
-            execFile('node', [scriptPath], { cwd: ROOT, timeout: 120000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout) => {
-                try {
-                    const parsed = JSON.parse((stdout || '').trim().split('\n').pop());
-                    if (parsed && parsed.error) syncError = parsed.error;
-                } catch { /* нет распарсиваемого вывода — не критично */ }
-                store = loadVoiceStore();
-                store.last_synced_at = now;
-                fs.writeFileSync(storePath, JSON.stringify(store, null, 2));
-                respond();
-            });
-        } else {
-            respond();
-        }
+            res.end(JSON.stringify(buildVoiceActivityResponse()));
+        });
         return;
     }
 

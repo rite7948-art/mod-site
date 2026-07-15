@@ -1107,6 +1107,7 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 .va-person-info { flex: 1; min-width: 0; }
 .va-person-nick { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .va-person-rank { font-family: var(--font-mono); font-size: 0.64rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.va-person-id { text-transform: none; letter-spacing: normal; opacity: 0.75; }
 .va-person-totals { display: flex; gap: 24px; flex-shrink: 0; }
 .va-total { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .va-total-label { font-family: var(--font-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
@@ -1123,6 +1124,11 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 .va-week-cell.is-today .va-week-bar-fill.has-time { background: var(--ok); }
 .va-week-hours { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-secondary); }
 .va-week-hours.is-zero { color: var(--text-muted); opacity: 0.5; }
+
+.va-sessions { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border-color); }
+.va-sessions-label { font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; }
+.va-session-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.82rem; color: var(--text-secondary); padding: 3px 0; }
+.va-session-dur { font-family: var(--font-mono); color: var(--text-primary); }
 
 /* "Сейчас в комнатах" */
 .va-online-row {

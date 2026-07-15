@@ -54,11 +54,19 @@ function dayKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function addSeconds(store, userId, nick, seconds, atDate) {
+const MAX_SESSIONS_PER_USER = 300;
+
+// Закрывает сессию: копит агрегаты (неделя/месяц/день) и добавляет точную
+// запись "зашёл-вышел" в историю — именно её просит показывать сайт
+// (00:00–01:00 — 10 м 23 с), не только суммарные цифры.
+function closeSession(store, userId, nick, fromMs, toMs) {
+    const seconds = Math.round((toMs - fromMs) / 1000);
     if (seconds <= 0) return;
-    if (!store.totals[userId]) store.totals[userId] = { nick, weeks: {}, months: {}, days: {} };
+    const atDate = new Date(toMs);
+    if (!store.totals[userId]) store.totals[userId] = { nick, weeks: {}, months: {}, days: {}, sessions: [] };
     const t = store.totals[userId];
     if (!t.days) t.days = {};
+    if (!t.sessions) t.sessions = [];
     t.nick = nick || t.nick;
     const wk = isoWeekKey(atDate);
     const mk = monthKey(atDate);
@@ -66,6 +74,8 @@ function addSeconds(store, userId, nick, seconds, atDate) {
     t.weeks[wk] = (t.weeks[wk] || 0) + seconds;
     t.months[mk] = (t.months[mk] || 0) + seconds;
     t.days[dk] = (t.days[dk] || 0) + seconds;
+    t.sessions.push({ from: fromMs, to: toMs, seconds });
+    if (t.sessions.length > MAX_SESSIONS_PER_USER) t.sessions = t.sessions.slice(-MAX_SESSIONS_PER_USER);
 }
 
 // Best-effort полный список текущих держателей роли Модератора — нужен,
@@ -191,13 +201,13 @@ client.on('ready', async () => {
             } else if (ev.type === 'leave') {
                 const sess = store.open_sessions[ev.userId];
                 if (sess && sess.channelId === ev.channelId) {
-                    addSeconds(store, ev.userId, ev.nick, Math.round((ev.at.getTime() - sess.since) / 1000), ev.at);
+                    closeSession(store, ev.userId, ev.nick, sess.since, ev.at.getTime());
                     delete store.open_sessions[ev.userId];
                 }
             } else if (ev.type === 'move') {
                 const sess = store.open_sessions[ev.userId];
                 if (sess && ev.fromChannelId && sess.channelId === ev.fromChannelId) {
-                    addSeconds(store, ev.userId, ev.nick, Math.round((ev.at.getTime() - sess.since) / 1000), ev.at);
+                    closeSession(store, ev.userId, ev.nick, sess.since, ev.at.getTime());
                     delete store.open_sessions[ev.userId];
                 }
                 if (ev.toChannelId && roomIds.has(ev.toChannelId)) {

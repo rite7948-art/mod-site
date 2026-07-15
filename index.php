@@ -2076,13 +2076,19 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             <div class="va-week-bar"><div class="va-week-bar-fill${d.seconds ? ' has-time' : ''}" style="height:${d.seconds ? Math.max(10, Math.round(d.seconds / maxSec * 100)) : 4}%"></div></div>
                             <span class="va-week-hours${d.seconds ? '' : ' is-zero'}">${formatDuration(d.seconds)}</span>
                         </div>`).join('');
+                    const sessions = row.sessions_today || [];
+                    const sessionsHtml = sessions.length ? `
+                        <div class="va-sessions">
+                            <div class="va-sessions-label">Сегодня по сессиям</div>
+                            ${sessions.map(s => `<div class="va-session-row"><span>${s.from} – ${s.to}</span><span class="va-session-dur">${s.duration}</span></div>`).join('')}
+                        </div>` : '';
                     return `
                         <div class="va-person">
                             <div class="va-person-top">
                                 <div class="va-avatar">${initial(row.nick)}</div>
                                 <div class="va-person-info">
                                     <div class="va-person-nick">${escapeHtml(row.nick)}</div>
-                                    <div class="va-person-rank">#${i + 1}</div>
+                                    <div class="va-person-rank">#${i + 1} · <span class="va-person-id">${escapeHtml(row.id)}</span></div>
                                 </div>
                                 <div class="va-person-totals">
                                     <div class="va-total">
@@ -2096,6 +2102,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                 </div>
                             </div>
                             <div class="va-week-grid">${daysHtml}</div>
+                            ${sessionsHtml}
                         </div>`;
                 }).join('');
             }
