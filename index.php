@@ -81,12 +81,6 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         <li class="nav-item">
                             <a class="nav-link" data-tab="archive"><i class="fas fa-box-archive"></i> <span>Архив</span></a>
                         </li>
-                    </ul>
-                </div>
-
-                <div class="nav-section">
-                    <div class="nav-label">Легенда</div>
-                    <ul class="nav-menu">
                         <li class="nav-item">
                             <a class="nav-link" data-tab="sync"><i class="fas fa-rotate"></i> <span>Сверка таблицы</span></a>
                         </li>
