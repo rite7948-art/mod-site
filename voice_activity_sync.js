@@ -117,11 +117,9 @@ client.on('ready', async () => {
         // Список "Комнат" текущей категории — не хардкодим ID на случай
         // пересоздания каналов, тянем свежим на каждый прогон.
         await guild.channels.fetch();
-        const roomIds = new Set(
-            guild.channels.cache
-                .filter(c => c.parentId === ROOMS_CATEGORY_ID && c.isVoice?.())
-                .map(c => c.id)
-        );
+        const roomChannels = guild.channels.cache.filter(c => c.parentId === ROOMS_CATEGORY_ID && c.isVoice?.());
+        const roomIds = new Set(roomChannels.map(c => c.id));
+        const roomNameById = new Map(roomChannels.map(c => [c.id, c.name]));
 
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
         const store = loadStore();
@@ -137,7 +135,10 @@ client.on('ready', async () => {
             if (ev.userId === SELFBOT_ACCOUNT_ID) continue;
 
             if (ev.type === 'join' && roomIds.has(ev.channelId)) {
-                store.open_sessions[ev.userId] = { channelId: ev.channelId, since: ev.at.getTime(), nick: ev.nick };
+                store.open_sessions[ev.userId] = {
+                    channelId: ev.channelId, channelName: roomNameById.get(ev.channelId) || '',
+                    since: ev.at.getTime(), nick: ev.nick,
+                };
             } else if (ev.type === 'leave') {
                 const sess = store.open_sessions[ev.userId];
                 if (sess && sess.channelId === ev.channelId) {
@@ -151,7 +152,10 @@ client.on('ready', async () => {
                     delete store.open_sessions[ev.userId];
                 }
                 if (ev.toChannelId && roomIds.has(ev.toChannelId)) {
-                    store.open_sessions[ev.userId] = { channelId: ev.toChannelId, since: ev.at.getTime(), nick: ev.nick };
+                    store.open_sessions[ev.userId] = {
+                        channelId: ev.toChannelId, channelName: roomNameById.get(ev.toChannelId) || '',
+                        since: ev.at.getTime(), nick: ev.nick,
+                    };
                 }
             }
         }

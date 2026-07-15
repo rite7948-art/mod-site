@@ -798,8 +798,12 @@ const server = http.createServer(async (req, res) => {
                 week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
                 month_seconds: (t.months && t.months[monthKey]) || 0,
             })).sort((a, b) => b.week_seconds - a.week_seconds);
+            const openSessions = store.open_sessions || {};
+            const online = Object.entries(openSessions).map(([id, s]) => ({
+                id, nick: s.nick || id, channel_name: s.channelName || '', since: s.since,
+            })).sort((a, b) => a.since - b.since);
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify({ leaderboard, synced_at: store.last_synced_at || null, sync_error: syncError }));
+            res.end(JSON.stringify({ leaderboard, online, synced_at: store.last_synced_at || null, sync_error: syncError }));
         };
 
         if (now - lastSyncedAt > 60000) {

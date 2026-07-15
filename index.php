@@ -882,6 +882,17 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     <div class="card">
                         <div class="card-header">
                             <div style="display:flex;align-items:center;gap:12px;">
+                                <i class="fas fa-circle" style="color:var(--ok);font-size:0.7rem;"></i>
+                                <h3>Сейчас в комнатах</h3>
+                            </div>
+                            <span class="status-badge" id="voiceOnlineCount">0</span>
+                        </div>
+                        <div id="voiceOnlineList"></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex;align-items:center;gap:12px;">
                                 <i class="fas fa-microphone" style="color:var(--accent);font-size:1.3rem;"></i>
                                 <h3>Активность в голосовых комнатах</h3>
                             </div>
@@ -1004,7 +1015,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             'tokens': ['Токены', 'Учёт токенов'],
             'levelup': ['Level up', ''],
             'embeds': ['Эмбиты', 'Публикация в инфо-каналы'],
-            'voice-activity': ['Активность', 'Время в голосовых комнатах за неделю/месяц']
+            'voice-activity': ['Активность', '']
         };
 
         const links = document.querySelectorAll('.nav-link[data-tab]');
@@ -2019,6 +2030,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const list = document.getElementById('voiceActivityList');
             const statusEl = document.getElementById('voiceActivityStatus');
             const refreshBtn = document.getElementById('voiceActivityRefreshBtn');
+            const onlineList = document.getElementById('voiceOnlineList');
+            const onlineCount = document.getElementById('voiceOnlineCount');
             if (!list) return;
 
             function formatDuration(seconds) {
@@ -2028,6 +2041,26 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 if (h === 0) return m + 'м';
                 return h + 'ч ' + m + 'м';
             }
+            function formatSince(sinceMs) {
+                const seconds = Math.max(0, Math.round((Date.now() - sinceMs) / 1000));
+                return formatDuration(seconds) || '0м';
+            }
+
+            function renderOnline(online) {
+                onlineCount.textContent = online.length;
+                if (online.length === 0) {
+                    onlineList.innerHTML = '<div class="reports-empty">Сейчас никого нет в комнатах.</div>';
+                    return;
+                }
+                onlineList.innerHTML = online.map(o => `
+                    <div class="va-online-row">
+                        <div class="va-online-main">
+                            <span class="va-nick">${escapeHtml(o.nick)}</span>
+                            <span class="va-online-channel">${escapeHtml(o.channel_name || '')}</span>
+                        </div>
+                        <span class="va-online-since">${formatSince(o.since)}</span>
+                    </div>`).join('');
+            }
 
             async function loadVoiceActivity() {
                 statusEl.textContent = 'Загрузка…';
@@ -2036,6 +2069,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     const r = await fetch('/api/voice-activity.php');
                     if (!r.ok) throw new Error('HTTP ' + r.status);
                     const data = await r.json();
+                    renderOnline(data.online || []);
                     const board = data.leaderboard || [];
                     if (board.length === 0) {
                         list.innerHTML = '<div class="reports-empty">Пока нет данных активности.</div>';
@@ -2053,6 +2087,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     if (data.sync_error) statusEl.textContent += ' — ошибка синка: ' + data.sync_error;
                 } catch (e) {
                     list.innerHTML = '<div class="reports-empty">Не удалось загрузить активность.</div>';
+                    onlineList.innerHTML = '';
                     statusEl.textContent = '';
                 } finally {
                     refreshBtn.disabled = false;

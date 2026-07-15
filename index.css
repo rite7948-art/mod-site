@@ -1105,6 +1105,14 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 .va-nick { color: var(--text-primary); font-weight: 500; }
 .va-time { font-family: var(--font-mono); font-size: 0.86rem; color: var(--text-secondary); }
 .va-time.is-zero { color: var(--text-muted); opacity: 0.6; }
+.va-online-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 0.65rem 1rem; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 11px;
+    margin-bottom: 8px;
+}
+.va-online-main { display: flex; flex-direction: column; gap: 2px; }
+.va-online-channel { font-size: 0.76rem; color: var(--text-muted); }
+.va-online-since { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; }
 .embed-history-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.76rem; color: var(--text-muted); flex-wrap: wrap; }
 .embed-history-repeat {
     background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary);
