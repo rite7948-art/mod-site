@@ -562,6 +562,10 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                 <input type="radio" name="embedChannel" value="curator">
                                 <span>Инфо для кураторов</span>
                             </label>
+                            <label class="embed-channel-opt">
+                                <input type="radio" name="embedChannel" value="help">
+                                <span>Как пользоваться сайтом</span>
+                            </label>
                         </div>
 
                         <div id="embedCardsContainer"></div>
@@ -1689,15 +1693,15 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const totalCounterEl = document.getElementById('embedTotalCounter');
 
             const EMBED_GUILD_ID = '531970658633252864';
-            const EMBED_CHANNEL_IDS = { master: '1510992131446018139', curator: '1510992164392538163' };
+            const EMBED_CHANNEL_IDS = { master: '1510992131446018139', curator: '1510992164392538163', help: '1526302909493543092' };
             const CHANNEL_KEY_BY_ID = Object.fromEntries(Object.entries(EMBED_CHANNEL_IDS).map(([k, v]) => [v, k]));
-            const CHANNEL_LABELS = { master: 'Мастера', curator: 'Кураторы' };
+            const CHANNEL_LABELS = { master: 'Мастера', curator: 'Кураторы', help: 'Как пользоваться сайтом' };
             const PRESET_COLORS = ['#e5352b', '#fbbf24', '#34d399', '#9fb4cc', '#d99cb8', '#5865f2'];
             const MAX_EMBEDS = 10;
             let editing = null; // { channelId, messageId }
 
             function setChannelRadio(channelKey) {
-                const radio = document.querySelector(`input[name="embedChannel"][value="${channelKey === 'curator' ? 'curator' : 'master'}"]`);
+                const radio = document.querySelector(`input[name="embedChannel"][value="${channelKey in EMBED_CHANNEL_IDS ? channelKey : 'master'}"]`);
                 if (radio) radio.checked = true;
             }
 
@@ -1901,7 +1905,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         <div class="embed-history-main">
                             <div class="embed-history-title">${escapeHtml(first.title || first.description || '(без текста)')}${countBadge}</div>
                             <div class="embed-history-meta">
-                                <span class="warn-cat-${item.channel === 'curator' ? 'curator' : 'master'}">${escapeHtml(label)}</span>
+                                <span class="warn-cat-${item.channel in CHANNEL_LABELS ? item.channel : 'master'}">${escapeHtml(label)}</span>
                                 <span>${escapeHtml(item.sent_by || '—')}</span>
                                 <span>${escapeHtml(when)}${editedNote}</span>
                             </div>

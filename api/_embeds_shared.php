@@ -6,6 +6,7 @@ function embed_channels() {
     return [
         'master'  => '1510992131446018139',
         'curator' => '1510992164392538163',
+        'help'    => '1526302909493543092',
     ];
 }
 

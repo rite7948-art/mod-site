@@ -562,7 +562,8 @@ const server = http.createServer(async (req, res) => {
 
         const EMBED_CHANNELS = {
             master: '1510992131446018139',
-            curator: '1510992164392538163'
+            curator: '1510992164392538163',
+            help: '1526302909493543092'
         };
         const body = await readJsonBody(req);
         const channelId = EMBED_CHANNELS[body.channel];
@@ -619,7 +620,7 @@ const server = http.createServer(async (req, res) => {
         if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'unauthorized' })); return; }
         if (roleLevel(user.role) < 2) { res.writeHead(403); res.end(JSON.stringify({ error: 'forbidden' })); return; }
 
-        const EMBED_CHANNELS = { master: '1510992131446018139', curator: '1510992164392538163' };
+        const EMBED_CHANNELS = { master: '1510992131446018139', curator: '1510992164392538163', help: '1526302909493543092' };
         const channelKeyById = Object.fromEntries(Object.entries(EMBED_CHANNELS).map(([k, v]) => [v, k]));
         const discordToken = process.env.DISCORD_TOKEN || '';
         if (!discordToken) { res.writeHead(500); res.end(JSON.stringify({ error: 'DISCORD_TOKEN не настроен' })); return; }
