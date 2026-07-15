@@ -132,12 +132,13 @@ function checkAuth(req, res) {
 }
 
 // === Активность в голосовых "Комнатах" ===
+// Селфбот здесь держит постоянное соединение (voice_activity_live.js) — по
+// явному запросу владельца сайта, вместо коротких сеансов логина. Этот
+// роут только читает уже актуальный (обновляемый в реальном времени) файл.
+const { startVoiceActivityWatcher } = require('./voice_activity_live.js');
 const VOICE_ACTIVITY_PATH = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(ROOT, 'voice_activity.json');
-const VOICE_SYNC_SCRIPT = path.join(ROOT, 'voice_activity_sync.js');
-const VOICE_SYNC_INTERVAL_MS = Number(process.env.VOICE_SYNC_INTERVAL_MS || 5 * 60 * 1000);
-const VOICE_SYNC_MIN_GAP_MS = 60000; // не чаще раза в минуту по запросу с сайта
-let voiceSyncInFlight = null;
 let voiceLastSyncError = null;
+startVoiceActivityWatcher(VOICE_ACTIVITY_PATH, (err) => { voiceLastSyncError = err; });
 
 function loadVoiceStore() {
     try { return JSON.parse(fs.readFileSync(VOICE_ACTIVITY_PATH, 'utf8')); } catch { return {}; }
@@ -190,31 +191,6 @@ function voiceDayDuration(seconds) {
     return parts.join(' ');
 }
 
-// Запускает короткий прогон селфбота (login → разбор новых сообщений лога →
-// logout), не чаще раза в минуту, и не параллельно самому себе.
-function runVoiceActivitySync(callback) {
-    const store = loadVoiceStore();
-    const now = Date.now();
-    if (voiceSyncInFlight) { voiceSyncInFlight.then(callback); return; }
-    if (now - (store.last_synced_at || 0) < VOICE_SYNC_MIN_GAP_MS) { callback(); return; }
-
-    voiceSyncInFlight = new Promise(resolve => {
-        execFile('node', [VOICE_SYNC_SCRIPT], { cwd: ROOT, timeout: 120000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout) => {
-            voiceLastSyncError = null;
-            try {
-                const parsed = JSON.parse((stdout || '').trim().split('\n').pop());
-                if (parsed && parsed.error) voiceLastSyncError = parsed.error;
-            } catch { /* нет распарсиваемого вывода — не критично */ }
-            const fresh = loadVoiceStore();
-            fresh.last_synced_at = Date.now();
-            fs.writeFileSync(VOICE_ACTIVITY_PATH, JSON.stringify(fresh, null, 2));
-            voiceSyncInFlight = null;
-            resolve();
-        });
-    });
-    voiceSyncInFlight.then(callback);
-}
-
 function buildVoiceActivityResponse() {
     const store = loadVoiceStore();
     const weekKey = voiceIsoWeekKey(new Date());
@@ -249,11 +225,6 @@ function buildVoiceActivityResponse() {
     })).sort((a, b) => a.since - b.since);
     return { leaderboard, online, synced_at: store.last_synced_at || null, sync_error: voiceLastSyncError };
 }
-
-// Крутим синк по таймеру независимо от запросов с сайта — данные копятся
-// сами, а не только когда кто-то открыл вкладку "Активность".
-setInterval(() => runVoiceActivitySync(() => {}), VOICE_SYNC_INTERVAL_MS);
-runVoiceActivitySync(() => {});
 
 const server = http.createServer(async (req, res) => {
     const u = new URL(req.url, `http://${req.headers.host}`);
@@ -328,16 +299,13 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    // Активность в голосовых "Комнатах" — накопленное время за неделю/месяц,
-    // разбор ведёт voice_activity_sync.js (селфбот, короткий прогон). Помимо
-    // отклика на запрос сайта, тот же прогон крутится по таймеру (см. низ
-    // файла), чтобы данные копились сами, а не только когда кто-то открыл вкладку.
+    // Активность в голосовых "Комнатах" — селфбот держит постоянное
+    // соединение (voice_activity_live.js) и обновляет файл в реальном
+    // времени, так что здесь просто отдаём текущее состояние.
     if (pathname === '/voice-activity' && req.method === 'GET') {
         if (!checkAuth(req, res)) return;
-        runVoiceActivitySync(() => {
-            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify(buildVoiceActivityResponse()));
-        });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(buildVoiceActivityResponse()));
         return;
     }
 

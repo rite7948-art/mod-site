@@ -5,6 +5,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
-COPY sync_service.js check_moder_sync.js fetch_high_staff_avatars.js voice_activity_sync.js ./
+COPY sync_service.js check_moder_sync.js fetch_high_staff_avatars.js voice_activity_sync.js voice_activity_live.js ./
 
 CMD ["node", "sync_service.js"]
