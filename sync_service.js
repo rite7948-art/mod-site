@@ -161,9 +161,11 @@ function voiceCurrentWeekDates() {
     const dayNum = (now.getDay() + 6) % 7; // 0=Пн..6=Вс
     const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayNum);
     const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    const fullLabels = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
     return labels.map((label, i) => {
         const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-        return { key: voiceDayKey(d), label };
+        const date = String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+        return { key: voiceDayKey(d), label, full_label: fullLabels[i], date };
     });
 }
 function voiceClock(ms) {
@@ -174,6 +176,18 @@ function voiceDuration(seconds) {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return m > 0 ? `${m} м ${s} с` : `${s} с`;
+}
+// Формат "16 мин. 30 сек." / "0 сек." — как в дневной сводке.
+function voiceDayDuration(seconds) {
+    if (!seconds) return '0 сек.';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const parts = [];
+    if (h > 0) parts.push(h + ' ч.');
+    if (m > 0) parts.push(m + ' мин.');
+    if (s > 0 || parts.length === 0) parts.push(s + ' сек.');
+    return parts.join(' ');
 }
 
 // Запускает короткий прогон селфбота (login → разбор новых сообщений лога →
@@ -222,7 +236,10 @@ function buildVoiceActivityResponse() {
             id, nick: roster[id] || t.nick || id,
             week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
             month_seconds: (t.months && t.months[mKey]) || 0,
-            days: weekDates.map(wd => ({ label: wd.label, seconds: (t.days && t.days[wd.key]) || 0 })),
+            days: weekDates.map(wd => {
+                const seconds = (t.days && t.days[wd.key]) || 0;
+                return { label: wd.label, full_label: wd.full_label, date: wd.date, seconds, duration: voiceDayDuration(seconds) };
+            }),
             sessions_today: sessionsToday,
         };
     }).sort((a, b) => b.week_seconds - a.week_seconds);

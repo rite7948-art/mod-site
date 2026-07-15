@@ -2069,12 +2069,10 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 const todayIdx = (new Date().getDay() + 6) % 7;
                 list.innerHTML = board.map((row, i) => {
                     const days = row.days || [];
-                    const maxSec = Math.max(1, ...days.map(d => d.seconds));
                     const daysHtml = days.map((d, di) => `
-                        <div class="va-week-cell${di === todayIdx ? ' is-today' : ''}">
-                            <span class="va-week-day">${d.label}</span>
-                            <div class="va-week-bar"><div class="va-week-bar-fill${d.seconds ? ' has-time' : ''}" style="height:${d.seconds ? Math.max(10, Math.round(d.seconds / maxSec * 100)) : 4}%"></div></div>
-                            <span class="va-week-hours${d.seconds ? '' : ' is-zero'}">${formatDuration(d.seconds)}</span>
+                        <div class="va-day-row${di === todayIdx ? ' is-today' : ''}">
+                            <div class="va-day-title"><i class="fas fa-shield-halved"></i> ${escapeHtml(d.full_label)} (${escapeHtml(d.date)}):</div>
+                            <div class="va-day-detail">• За день: ${escapeHtml(d.duration)}</div>
                         </div>`).join('');
                     const sessions = row.sessions_today || [];
                     const sessionsHtml = sessions.length ? `
@@ -2101,7 +2099,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                     </div>
                                 </div>
                             </div>
-                            <div class="va-week-grid">${daysHtml}</div>
+                            <div class="va-days-list">${daysHtml}</div>
                             ${sessionsHtml}
                         </div>`;
                 }).join('');
