@@ -2076,7 +2076,12 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     } else {
                         list.innerHTML = board.map((row, i) => `
                             <div class="va-row">
-                                <span><span class="va-rank">#${i + 1}</span><span class="va-nick">${escapeHtml(row.nick)}</span></span>
+                                <div class="va-row-main">
+                                    <span><span class="va-rank">#${i + 1}</span><span class="va-nick">${escapeHtml(row.nick)}</span></span>
+                                    <span class="va-days-row">
+                                        ${(row.days || []).map(d => `<span class="va-day${d.seconds ? '' : ' is-zero'}">${d.label} ${formatDuration(d.seconds)}</span>`).join('')}
+                                    </span>
+                                </div>
                                 <span class="va-time${row.week_seconds ? '' : ' is-zero'}">${formatDuration(row.week_seconds)}</span>
                                 <span class="va-time${row.month_seconds ? '' : ' is-zero'}">${formatDuration(row.month_seconds)}</span>
                             </div>`).join('');

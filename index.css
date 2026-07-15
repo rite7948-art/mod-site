@@ -1101,6 +1101,10 @@ body.auth-locked .dashboard-container { visibility: hidden; }
     padding: 0.7rem 1rem; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 11px;
     margin-bottom: 8px;
 }
+.va-row-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.va-days-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.va-day { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-secondary); }
+.va-day.is-zero { color: var(--text-muted); opacity: 0.45; }
 .va-rank { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-right: 8px; }
 .va-nick { color: var(--text-primary); font-weight: 500; }
 .va-time { font-family: var(--font-mono); font-size: 0.86rem; color: var(--text-secondary); }

@@ -15,6 +15,7 @@ const path = require('path');
 const { Client } = require('discord.js-selfbot-v13');
 
 const GUILD_ID = process.env.MODER_GUILD_ID || '531970658633252864';
+const ROLE_ID = process.env.MODER_ROLE_ID || '1148609467257208904';
 const ROOMS_CATEGORY_ID = process.env.VOICE_ROOMS_CATEGORY_ID || '965250253873889310';
 const LOG_CHANNEL_ID = process.env.VOICE_LOG_CHANNEL_ID || '965269054321471530';
 const STORE_PATH = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(__dirname, 'voice_activity.json');
@@ -47,16 +48,39 @@ function isoWeekKey(date) {
 function monthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
+function dayKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 function addSeconds(store, userId, nick, seconds, atDate) {
     if (seconds <= 0) return;
-    if (!store.totals[userId]) store.totals[userId] = { nick, weeks: {}, months: {} };
+    if (!store.totals[userId]) store.totals[userId] = { nick, weeks: {}, months: {}, days: {} };
     const t = store.totals[userId];
+    if (!t.days) t.days = {};
     t.nick = nick || t.nick;
     const wk = isoWeekKey(atDate);
     const mk = monthKey(atDate);
+    const dk = dayKey(atDate);
     t.weeks[wk] = (t.weeks[wk] || 0) + seconds;
     t.months[mk] = (t.months[mk] || 0) + seconds;
+    t.days[dk] = (t.days[dk] || 0) + seconds;
+}
+
+// Точечно проверяем роль Модератора только у тех, кто реально встретился в
+// логе/уже отслеживается — не полный скан гигантского сервера.
+async function fetchModeratorIds(guild, userIds) {
+    const moderatorIds = new Set();
+    const ids = Array.from(new Set(userIds));
+    const chunkSize = 100;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        try {
+            const fetched = await guild.members.fetch({ user: chunk, withPresences: false });
+            fetched.forEach(m => { if (m.roles.cache.has(ROLE_ID)) moderatorIds.add(m.id); });
+        } catch { /* участник мог выйти с сервера — пропускаем */ }
+        if (ids.length > chunkSize) await new Promise(r => setTimeout(r, 400));
+    }
+    return moderatorIds;
 }
 
 function parseEvent(msg) {
@@ -137,10 +161,27 @@ client.on('ready', async () => {
             ? [...(await logChannel.messages.fetch({ limit: 100 })).values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp)
             : await fetchNewMessages(logChannel, store.last_message_id);
 
-        for (const msg of messages) {
-            const ev = parseEvent(msg);
-            if (!ev) continue;
-            if (ev.userId === SELFBOT_ACCOUNT_ID) continue;
+        const events = messages.map(parseEvent).filter(ev => ev && ev.userId !== SELFBOT_ACCOUNT_ID);
+
+        // Считаем только тех, у кого прямо сейчас есть роль Модератора —
+        // проверяем адресно (уже отслеживаемых + встретившихся в этой
+        // партии сообщений), не сканируем весь гигантский сервер.
+        const candidateIds = new Set([
+            ...Object.keys(store.totals),
+            ...Object.keys(store.open_sessions),
+            ...events.map(ev => ev.userId),
+        ]);
+        const moderatorIds = await fetchModeratorIds(guild, [...candidateIds]);
+
+        for (const id of Object.keys(store.open_sessions)) {
+            if (!moderatorIds.has(id)) delete store.open_sessions[id];
+        }
+        for (const id of Object.keys(store.totals)) {
+            if (!moderatorIds.has(id)) delete store.totals[id];
+        }
+
+        for (const ev of events) {
+            if (!moderatorIds.has(ev.userId)) continue;
 
             if (ev.type === 'join' && roomIds.has(ev.channelId)) {
                 store.open_sessions[ev.userId] = {

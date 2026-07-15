@@ -225,6 +225,19 @@ const server = http.createServer(async (req, res) => {
         function monthKey(date) {
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         }
+        function dayKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+        function currentWeekDates() {
+            const now = new Date();
+            const dayNum = (now.getDay() + 6) % 7; // 0=Пн..6=Вс
+            const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayNum);
+            const labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            return labels.map((label, i) => {
+                const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+                return { key: dayKey(d), label };
+            });
+        }
 
         let store = loadVoiceStore();
         const now = Date.now();
@@ -234,11 +247,13 @@ const server = http.createServer(async (req, res) => {
         const respond = () => {
             const weekKey = isoWeekKey(new Date());
             const mKey = monthKey(new Date());
+            const weekDates = currentWeekDates();
             const totals = store.totals || {};
             const leaderboard = Object.entries(totals).map(([id, t]) => ({
                 id, nick: t.nick || id,
                 week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
                 month_seconds: (t.months && t.months[mKey]) || 0,
+                days: weekDates.map(wd => ({ label: wd.label, seconds: (t.days && t.days[wd.key]) || 0 })),
             })).sort((a, b) => b.week_seconds - a.week_seconds);
             const openSessions = store.open_sessions || {};
             const online = Object.entries(openSessions).map(([id, s]) => ({
