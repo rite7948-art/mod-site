@@ -807,12 +807,17 @@ const server = http.createServer(async (req, res) => {
             const monthKey = voiceMonthKey(new Date());
             const weekDates = voiceCurrentWeekDates();
             const totals = store.totals || {};
-            const leaderboard = Object.entries(totals).map(([id, t]) => ({
-                id, nick: t.nick || id,
-                week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
-                month_seconds: (t.months && t.months[monthKey]) || 0,
-                days: weekDates.map(wd => ({ label: wd.label, seconds: (t.days && t.days[wd.key]) || 0 })),
-            })).sort((a, b) => b.week_seconds - a.week_seconds);
+            const roster = store.moderator_roster || {};
+            const ids = new Set([...Object.keys(roster), ...Object.keys(totals)]);
+            const leaderboard = [...ids].map(id => {
+                const t = totals[id] || {};
+                return {
+                    id, nick: roster[id] || t.nick || id,
+                    week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
+                    month_seconds: (t.months && t.months[monthKey]) || 0,
+                    days: weekDates.map(wd => ({ label: wd.label, seconds: (t.days && t.days[wd.key]) || 0 })),
+                };
+            }).sort((a, b) => b.week_seconds - a.week_seconds);
             const openSessions = store.open_sessions || {};
             const online = Object.entries(openSessions).map(([id, s]) => ({
                 id, nick: s.nick || id, channel_name: s.channelName || '', since: s.since,

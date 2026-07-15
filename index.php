@@ -901,11 +901,6 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             </button>
                         </div>
                         <div class="va-status" id="voiceActivityStatus"></div>
-                        <div class="va-head-row">
-                            <span>Участник</span>
-                            <span>За неделю</span>
-                            <span>За месяц</span>
-                        </div>
                         <div id="voiceActivityList"></div>
                     </div>
                 </section>
@@ -2045,6 +2040,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 const seconds = Math.max(0, Math.round((Date.now() - sinceMs) / 1000));
                 return formatDuration(seconds) || '0м';
             }
+            function initial(nick) {
+                return escapeHtml((nick || '?').trim().charAt(0) || '?');
+            }
 
             function renderOnline(online) {
                 onlineCount.textContent = online.length;
@@ -2054,12 +2052,52 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                 }
                 onlineList.innerHTML = online.map(o => `
                     <div class="va-online-row">
+                        <div class="va-avatar">${initial(o.nick)}</div>
                         <div class="va-online-main">
-                            <span class="va-nick">${escapeHtml(o.nick)}</span>
+                            <span class="va-online-nick">${escapeHtml(o.nick)}</span>
                             <span class="va-online-channel">${escapeHtml(o.channel_name || '')}</span>
                         </div>
                         <span class="va-online-since">${formatSince(o.since)}</span>
                     </div>`).join('');
+            }
+
+            function renderLeaderboard(board) {
+                if (board.length === 0) {
+                    list.innerHTML = '<div class="reports-empty">Пока нет данных активности.</div>';
+                    return;
+                }
+                const todayIdx = (new Date().getDay() + 6) % 7;
+                list.innerHTML = board.map((row, i) => {
+                    const days = row.days || [];
+                    const maxSec = Math.max(1, ...days.map(d => d.seconds));
+                    const daysHtml = days.map((d, di) => `
+                        <div class="va-week-cell${di === todayIdx ? ' is-today' : ''}">
+                            <span class="va-week-day">${d.label}</span>
+                            <div class="va-week-bar"><div class="va-week-bar-fill${d.seconds ? ' has-time' : ''}" style="height:${d.seconds ? Math.max(10, Math.round(d.seconds / maxSec * 100)) : 4}%"></div></div>
+                            <span class="va-week-hours${d.seconds ? '' : ' is-zero'}">${formatDuration(d.seconds)}</span>
+                        </div>`).join('');
+                    return `
+                        <div class="va-person">
+                            <div class="va-person-top">
+                                <div class="va-avatar">${initial(row.nick)}</div>
+                                <div class="va-person-info">
+                                    <div class="va-person-nick">${escapeHtml(row.nick)}</div>
+                                    <div class="va-person-rank">#${i + 1}</div>
+                                </div>
+                                <div class="va-person-totals">
+                                    <div class="va-total">
+                                        <span class="va-total-label">Неделя</span>
+                                        <span class="va-total-value${row.week_seconds ? '' : ' is-zero'}">${formatDuration(row.week_seconds)}</span>
+                                    </div>
+                                    <div class="va-total">
+                                        <span class="va-total-label">Месяц</span>
+                                        <span class="va-total-value${row.month_seconds ? '' : ' is-zero'}">${formatDuration(row.month_seconds)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="va-week-grid">${daysHtml}</div>
+                        </div>`;
+                }).join('');
             }
 
             async function loadVoiceActivity() {
@@ -2070,22 +2108,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
                     const data = await r.json();
                     renderOnline(data.online || []);
-                    const board = data.leaderboard || [];
-                    if (board.length === 0) {
-                        list.innerHTML = '<div class="reports-empty">Пока нет данных активности.</div>';
-                    } else {
-                        list.innerHTML = board.map((row, i) => `
-                            <div class="va-row">
-                                <div class="va-row-main">
-                                    <span><span class="va-rank">#${i + 1}</span><span class="va-nick">${escapeHtml(row.nick)}</span></span>
-                                    <span class="va-days-row">
-                                        ${(row.days || []).map(d => `<span class="va-day${d.seconds ? '' : ' is-zero'}">${d.label} ${formatDuration(d.seconds)}</span>`).join('')}
-                                    </span>
-                                </div>
-                                <span class="va-time${row.week_seconds ? '' : ' is-zero'}">${formatDuration(row.week_seconds)}</span>
-                                <span class="va-time${row.month_seconds ? '' : ' is-zero'}">${formatDuration(row.month_seconds)}</span>
-                            </div>`).join('');
-                    }
+                    renderLeaderboard(data.leaderboard || []);
                     statusEl.textContent = data.synced_at
                         ? 'Обновлено: ' + new Date(data.synced_at).toLocaleString('ru-RU')
                         : '';

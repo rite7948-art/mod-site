@@ -1091,32 +1091,49 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 
 /* ---------- Активность в голосовых ---------- */
 .va-status { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem; }
-.va-head-row {
-    display: grid; grid-template-columns: 1fr 120px 120px; gap: 12px; padding: 0 1rem 0.6rem;
-    font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em;
-    color: var(--text-muted); font-weight: 500;
+
+.va-avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem;
+    flex-shrink: 0; text-transform: uppercase; font-family: var(--font-mono);
 }
-.va-row {
-    display: grid; grid-template-columns: 1fr 120px 120px; gap: 12px; align-items: center;
-    padding: 0.7rem 1rem; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 11px;
-    margin-bottom: 8px;
+
+/* Карточка человека в лидерборде */
+.va-person {
+    background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 13px;
+    padding: 1rem 1.15rem; margin-bottom: 10px;
 }
-.va-row-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.va-days-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.va-day { font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-secondary); }
-.va-day.is-zero { color: var(--text-muted); opacity: 0.45; }
-.va-rank { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); margin-right: 8px; }
-.va-nick { color: var(--text-primary); font-weight: 500; }
-.va-time { font-family: var(--font-mono); font-size: 0.86rem; color: var(--text-secondary); }
-.va-time.is-zero { color: var(--text-muted); opacity: 0.6; }
+.va-person-top { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+.va-person-info { flex: 1; min-width: 0; }
+.va-person-nick { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.va-person-rank { font-family: var(--font-mono); font-size: 0.64rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.va-person-totals { display: flex; gap: 24px; flex-shrink: 0; }
+.va-total { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.va-total-label { font-family: var(--font-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.va-total-value { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); }
+.va-total-value.is-zero { color: var(--text-muted); font-weight: 400; }
+
+.va-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.va-week-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.va-week-day { font-family: var(--font-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.va-week-cell.is-today .va-week-day { color: var(--accent); font-weight: 600; }
+.va-week-bar { width: 100%; height: 34px; background: rgba(255, 255, 255, 0.04); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.va-week-bar-fill { width: 100%; background: var(--text-muted); border-radius: 6px; min-height: 3px; opacity: 0.5; }
+.va-week-bar-fill.has-time { background: var(--accent); opacity: 1; }
+.va-week-cell.is-today .va-week-bar-fill.has-time { background: var(--ok); }
+.va-week-hours { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-secondary); }
+.va-week-hours.is-zero { color: var(--text-muted); opacity: 0.5; }
+
+/* "Сейчас в комнатах" */
 .va-online-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 0.65rem 1rem; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 11px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0.6rem 1rem; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 11px;
     margin-bottom: 8px;
 }
-.va-online-main { display: flex; flex-direction: column; gap: 2px; }
+.va-online-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.va-online-nick { color: var(--text-primary); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .va-online-channel { font-size: 0.76rem; color: var(--text-muted); }
-.va-online-since { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; }
+.va-online-since { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ok); white-space: nowrap; flex-shrink: 0; }
 .embed-history-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.76rem; color: var(--text-muted); flex-wrap: wrap; }
 .embed-history-repeat {
     background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary);

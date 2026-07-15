@@ -20,6 +20,7 @@ const ROOMS_CATEGORY_ID = process.env.VOICE_ROOMS_CATEGORY_ID || '96525025387388
 const LOG_CHANNEL_ID = process.env.VOICE_LOG_CHANNEL_ID || '965269054321471530';
 const STORE_PATH = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(__dirname, 'voice_activity.json');
 const SELFBOT_ACCOUNT_ID = process.env.SELFBOT_ACCOUNT_ID || '1520428688255222008';
+const FULL_SCAN_TIMEOUT_MS = Number(process.env.VOICE_FULL_SCAN_TIMEOUT_MS || 45000);
 
 function loadStore() {
     try {
@@ -28,9 +29,10 @@ function loadStore() {
             last_message_id: d.last_message_id || null,
             open_sessions: d.open_sessions || {},
             totals: d.totals || {},
+            moderator_roster: d.moderator_roster || {},
         };
     } catch {
-        return { last_message_id: null, open_sessions: {}, totals: {} };
+        return { last_message_id: null, open_sessions: {}, totals: {}, moderator_roster: {} };
     }
 }
 function saveStore(store) {
@@ -66,21 +68,22 @@ function addSeconds(store, userId, nick, seconds, atDate) {
     t.days[dk] = (t.days[dk] || 0) + seconds;
 }
 
-// Точечно проверяем роль Модератора только у тех, кто реально встретился в
-// логе/уже отслеживается — не полный скан гигантского сервера.
-async function fetchModeratorIds(guild, userIds) {
-    const moderatorIds = new Set();
-    const ids = Array.from(new Set(userIds));
-    const chunkSize = 100;
-    for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize);
-        try {
-            const fetched = await guild.members.fetch({ user: chunk, withPresences: false });
-            fetched.forEach(m => { if (m.roles.cache.has(ROLE_ID)) moderatorIds.add(m.id); });
-        } catch { /* участник мог выйти с сервера — пропускаем */ }
-        if (ids.length > chunkSize) await new Promise(r => setTimeout(r, 400));
+// Best-effort полный список текущих держателей роли Модератора — нужен,
+// чтобы в лидерборде было видно и тех, у кого активности за период вообще
+// не было (не только тех, кто уже закрыл хоть одну сессию). На гигантском
+// сервере скан может быть неполным — тот же компромисс, что в
+// check_moder_sync.js для сверки таблицы.
+async function fetchModeratorRoster(guild) {
+    const roster = {};
+    try {
+        const fetchPromise = guild.members.fetch({ withPresences: false });
+        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), FULL_SCAN_TIMEOUT_MS));
+        const all = await Promise.race([fetchPromise, timeoutPromise]);
+        all.forEach(m => { if (m.roles.cache.has(ROLE_ID) && m.id !== SELFBOT_ACCOUNT_ID) roster[m.id] = m.displayName || m.user.username; });
+    } catch {
+        guild.members.cache.forEach(m => { if (m.roles.cache.has(ROLE_ID) && m.id !== SELFBOT_ACCOUNT_ID) roster[m.id] = m.displayName || m.user.username; });
     }
-    return moderatorIds;
+    return roster;
 }
 
 function parseEvent(msg) {
@@ -163,15 +166,12 @@ client.on('ready', async () => {
 
         const events = messages.map(parseEvent).filter(ev => ev && ev.userId !== SELFBOT_ACCOUNT_ID);
 
-        // Считаем только тех, у кого прямо сейчас есть роль Модератора —
-        // проверяем адресно (уже отслеживаемых + встретившихся в этой
-        // партии сообщений), не сканируем весь гигантский сервер.
-        const candidateIds = new Set([
-            ...Object.keys(store.totals),
-            ...Object.keys(store.open_sessions),
-            ...events.map(ev => ev.userId),
-        ]);
-        const moderatorIds = await fetchModeratorIds(guild, [...candidateIds]);
+        // Полный (best-effort) список текущих Модераторов — источник истины
+        // и для фильтрации событий, и для отображения тех, у кого активности
+        // ещё не было вовсе.
+        const moderatorRoster = await fetchModeratorRoster(guild);
+        store.moderator_roster = moderatorRoster;
+        const moderatorIds = new Set(Object.keys(moderatorRoster));
 
         for (const id of Object.keys(store.open_sessions)) {
             if (!moderatorIds.has(id)) delete store.open_sessions[id];
@@ -212,7 +212,7 @@ client.on('ready', async () => {
         if (messages.length > 0) store.last_message_id = messages[messages.length - 1].id;
         saveStore(store);
 
-        console.log(JSON.stringify({ ok: true, processed: messages.length, tracked_rooms: roomIds.size }));
+        console.log(JSON.stringify({ ok: true, processed: messages.length, tracked_rooms: roomIds.size, moderators: moderatorIds.size }));
     } catch (e) {
         console.log(JSON.stringify({ error: e.message }));
     } finally {
