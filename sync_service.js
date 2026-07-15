@@ -9,6 +9,7 @@
 
 try { require('dotenv').config(); } catch {}
 const http = require('http');
+const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 
@@ -199,6 +200,64 @@ const server = http.createServer(async (req, res) => {
         } catch (e) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    // Активность в голосовых "Комнатах" — накопленное время за неделю/месяц,
+    // разбор ведёт voice_activity_sync.js (селфбот, короткий прогон на
+    // каждый вызов, не чаще раза в минуту).
+    if (pathname === '/voice-activity' && req.method === 'GET') {
+        if (!checkAuth(req, res)) return;
+
+        const storePath = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(ROOT, 'voice_activity.json');
+        function loadVoiceStore() {
+            try { return JSON.parse(fs.readFileSync(storePath, 'utf8')); } catch { return {}; }
+        }
+        function isoWeekKey(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = (d.getUTCDay() + 6) % 7;
+            d.setUTCDate(d.getUTCDate() - dayNum + 3);
+            const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+            const weekNum = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+            return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        }
+        function monthKey(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        let store = loadVoiceStore();
+        const now = Date.now();
+        const lastSyncedAt = store.last_synced_at || 0;
+        let syncError = null;
+
+        const respond = () => {
+            const weekKey = isoWeekKey(new Date());
+            const mKey = monthKey(new Date());
+            const totals = store.totals || {};
+            const leaderboard = Object.entries(totals).map(([id, t]) => ({
+                id, nick: t.nick || id,
+                week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
+                month_seconds: (t.months && t.months[mKey]) || 0,
+            })).sort((a, b) => b.week_seconds - a.week_seconds);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ leaderboard, synced_at: store.last_synced_at || null, sync_error: syncError }));
+        };
+
+        if (now - lastSyncedAt > 60000) {
+            const scriptPath = path.join(ROOT, 'voice_activity_sync.js');
+            execFile('node', [scriptPath], { cwd: ROOT, timeout: 120000, maxBuffer: 20 * 1024 * 1024 }, (err, stdout) => {
+                try {
+                    const parsed = JSON.parse((stdout || '').trim().split('\n').pop());
+                    if (parsed && parsed.error) syncError = parsed.error;
+                } catch { /* нет распарсиваемого вывода — не критично */ }
+                store = loadVoiceStore();
+                store.last_synced_at = now;
+                fs.writeFileSync(storePath, JSON.stringify(store, null, 2));
+                respond();
+            });
+        } else {
+            respond();
         }
         return;
     }

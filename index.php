@@ -144,6 +144,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         <li class="nav-item">
                             <a class="nav-link" data-tab="tokens"><i class="fas fa-coins"></i> <span>Токены</span></a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-tab="voice-activity"><i class="fas fa-microphone"></i> <span>Активность</span></a>
+                        </li>
                     </ul>
                 </div>
 
@@ -874,6 +877,28 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     </div>
                 </section>
 
+                <!-- Активность в голосовых -->
+                <section class="tab-page" id="tab-voice-activity">
+                    <div class="card">
+                        <div class="card-header">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <i class="fas fa-microphone" style="color:var(--accent);font-size:1.3rem;"></i>
+                                <h3>Активность в голосовых комнатах</h3>
+                            </div>
+                            <button class="btn-confirm-save" id="voiceActivityRefreshBtn" type="button">
+                                <i class="fas fa-rotate"></i> Обновить
+                            </button>
+                        </div>
+                        <div class="va-status" id="voiceActivityStatus"></div>
+                        <div class="va-head-row">
+                            <span>Участник</span>
+                            <span>За неделю</span>
+                            <span>За месяц</span>
+                        </div>
+                        <div id="voiceActivityList"></div>
+                    </div>
+                </section>
+
                 <!-- Level up -->
                 <section class="tab-page" id="tab-levelup">
                     <div class="card">
@@ -934,7 +959,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             'memo-curators':    2,  // Curator+
             'wheel':            2,  // Curator+
             'sync':             1,  // все
-            'embeds':           2   // Curator+
+            'embeds':           2,  // Curator+
+            'voice-activity':   2   // Curator+
         };
         function currentRoleLevel() {
             return (ROLES[CURRENT_USER.role] || {}).level || 0;
@@ -977,7 +1003,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             'reports': ['Отчётность', 'Все отчёты собеседований'],
             'tokens': ['Токены', 'Учёт токенов'],
             'levelup': ['Level up', ''],
-            'embeds': ['Эмбиты', 'Публикация в инфо-каналы']
+            'embeds': ['Эмбиты', 'Публикация в инфо-каналы'],
+            'voice-activity': ['Активность', 'Время в голосовых комнатах за неделю/месяц']
         };
 
         const links = document.querySelectorAll('.nav-link[data-tab]');
@@ -1985,6 +2012,54 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     btn.disabled = false;
                 }
             });
+        })();
+
+        // === Активность в голосовых ===
+        (function initVoiceActivity() {
+            const list = document.getElementById('voiceActivityList');
+            const statusEl = document.getElementById('voiceActivityStatus');
+            const refreshBtn = document.getElementById('voiceActivityRefreshBtn');
+            if (!list) return;
+
+            function formatDuration(seconds) {
+                if (!seconds) return '—';
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                if (h === 0) return m + 'м';
+                return h + 'ч ' + m + 'м';
+            }
+
+            async function loadVoiceActivity() {
+                statusEl.textContent = 'Загрузка…';
+                refreshBtn.disabled = true;
+                try {
+                    const r = await fetch('/api/voice-activity.php');
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const data = await r.json();
+                    const board = data.leaderboard || [];
+                    if (board.length === 0) {
+                        list.innerHTML = '<div class="reports-empty">Пока нет данных активности.</div>';
+                    } else {
+                        list.innerHTML = board.map((row, i) => `
+                            <div class="va-row">
+                                <span><span class="va-rank">#${i + 1}</span><span class="va-nick">${escapeHtml(row.nick)}</span></span>
+                                <span class="va-time${row.week_seconds ? '' : ' is-zero'}">${formatDuration(row.week_seconds)}</span>
+                                <span class="va-time${row.month_seconds ? '' : ' is-zero'}">${formatDuration(row.month_seconds)}</span>
+                            </div>`).join('');
+                    }
+                    statusEl.textContent = data.synced_at
+                        ? 'Обновлено: ' + new Date(data.synced_at).toLocaleString('ru-RU')
+                        : '';
+                    if (data.sync_error) statusEl.textContent += ' — ошибка синка: ' + data.sync_error;
+                } catch (e) {
+                    list.innerHTML = '<div class="reports-empty">Не удалось загрузить активность.</div>';
+                    statusEl.textContent = '';
+                } finally {
+                    refreshBtn.disabled = false;
+                }
+            }
+            refreshBtn.addEventListener('click', loadVoiceActivity);
+            loadVoiceActivity();
         })();
 
         // === Level up ===

@@ -14,6 +14,7 @@ events.json
 levelup.json
 profiles.json
 embeds_log.json
+voice_activity.json
 
 # Локальный рантайм Node.js и старый бэкап-снимок — не часть исходников
 node20/

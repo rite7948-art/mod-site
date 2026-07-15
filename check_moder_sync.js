@@ -21,6 +21,9 @@ const ROLE_ID  = process.env.MODER_ROLE_ID  || '1148609467257208904';
 const SHEET_URL = process.env.MODER_SHEET_URL ||
     'https://docs.google.com/spreadsheets/d/15B4JWCgDLFZkzIqFZoQq9HMu0zgznDhKlLant1vddgU/export?format=csv&gid=87425732';
 const FULL_SCAN_TIMEOUT_MS = +process.env.MODER_FULL_SCAN_TIMEOUT_MS || 45000;
+// Аккаунт самого селфбота — технически состоит в сервере с ролью, но это не
+// человек из таблицы, поэтому в "лишних" его показывать не нужно.
+const SELFBOT_ACCOUNT_ID = process.env.SELFBOT_ACCOUNT_ID || '1520428688255222008';
 
 function parseCsv(text) {
     const rows = [];
@@ -112,6 +115,7 @@ client.on('ready', async () => {
         // 3) Сверка
         const extra = [];
         membersWithRole.forEach(m => {
+            if (m.id === SELFBOT_ACCOUNT_ID) return;
             if (!sheetById.has(m.id) && !ignoredIds.has(m.id)) {
                 extra.push({
                     id: m.id,
