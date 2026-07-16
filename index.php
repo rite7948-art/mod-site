@@ -901,6 +901,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                             </button>
                         </div>
                         <div class="va-status" id="voiceActivityStatus"></div>
+                        <input type="text" id="voiceActivitySearch" class="form-control" placeholder="Поиск по нику или Discord ID..." style="margin-bottom:1rem;">
                         <div id="voiceActivityList"></div>
                     </div>
                 </section>
@@ -2027,7 +2028,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             const refreshBtn = document.getElementById('voiceActivityRefreshBtn');
             const onlineList = document.getElementById('voiceOnlineList');
             const onlineCount = document.getElementById('voiceOnlineCount');
+            const searchInput = document.getElementById('voiceActivitySearch');
             if (!list) return;
+            let currentBoard = [];
 
             function formatDuration(seconds) {
                 if (!seconds) return '—';
@@ -2063,7 +2066,9 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
 
             function renderLeaderboard(board) {
                 if (board.length === 0) {
-                    list.innerHTML = '<div class="reports-empty">Пока нет данных активности.</div>';
+                    list.innerHTML = searchInput.value.trim()
+                        ? '<div class="reports-empty">Никого не нашлось.</div>'
+                        : '<div class="reports-empty">Пока нет данных активности.</div>';
                     return;
                 }
                 const todayIdx = (new Date().getDay() + 6) % 7;
@@ -2113,7 +2118,8 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
                     const data = await r.json();
                     renderOnline(data.online || []);
-                    renderLeaderboard(data.leaderboard || []);
+                    currentBoard = data.leaderboard || [];
+                    applyVoiceSearch();
                     statusEl.textContent = data.synced_at
                         ? 'Обновлено: ' + new Date(data.synced_at).toLocaleString('ru-RU')
                         : '';
@@ -2126,6 +2132,14 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     refreshBtn.disabled = false;
                 }
             }
+            function applyVoiceSearch() {
+                const q = searchInput.value.trim().toLowerCase();
+                const filtered = !q ? currentBoard : currentBoard.filter(r =>
+                    String(r.id || '').toLowerCase().includes(q) || String(r.nick || '').toLowerCase().includes(q));
+                renderLeaderboard(filtered);
+            }
+            searchInput.addEventListener('input', applyVoiceSearch);
+
             refreshBtn.addEventListener('click', loadVoiceActivity);
             loadVoiceActivity();
         })();
