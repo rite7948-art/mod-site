@@ -2100,7 +2100,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                 <div class="va-avatar">${initial(row.nick)}</div>
                                 <div class="va-person-info">
                                     <div class="va-person-nick">${escapeHtml(row.nick)}</div>
-                                    <div class="va-person-rank">#${i + 1} · <span class="va-person-id">${escapeHtml(row.id)}</span></div>
+                                    <div class="va-person-rank">#${i + 1} · <span class="va-person-id">${escapeHtml(row.id)}</span> <button type="button" class="va-id-copy" data-copy-id="${escapeHtml(row.id)}" title="Скопировать ID"><i class="fas fa-copy"></i></button></div>
                                 </div>
                                 <div class="va-person-totals">
                                     <div class="va-total">
@@ -2124,6 +2124,15 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
             }
 
             list.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.va-id-copy');
+                if (copyBtn) {
+                    navigator.clipboard.writeText(copyBtn.dataset.copyId).then(() => {
+                        const icon = copyBtn.querySelector('i');
+                        icon.className = 'fas fa-check';
+                        setTimeout(() => { icon.className = 'fas fa-copy'; }, 1200);
+                    });
+                    return;
+                }
                 const person = e.target.closest('.va-person');
                 if (!person) return;
                 const id = person.dataset.id;
