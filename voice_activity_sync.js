@@ -21,6 +21,8 @@ const LOG_CHANNEL_ID = process.env.VOICE_LOG_CHANNEL_ID || '965269054321471530';
 const STORE_PATH = process.env.VOICE_ACTIVITY_JSON_PATH || path.join(__dirname, 'voice_activity.json');
 const SELFBOT_ACCOUNT_ID = process.env.SELFBOT_ACCOUNT_ID || '1520428688255222008';
 const FULL_SCAN_TIMEOUT_MS = Number(process.env.VOICE_FULL_SCAN_TIMEOUT_MS || 45000);
+const MODER_SHEET_URL = process.env.MODER_SHEET_URL ||
+    'https://docs.google.com/spreadsheets/d/15B4JWCgDLFZkzIqFZoQq9HMu0zgznDhKlLant1vddgU/export?format=csv&gid=87425732';
 
 function loadStore() {
     try {
@@ -78,13 +80,62 @@ function closeSession(store, userId, nick, fromMs, toMs) {
     if (t.sessions.length > MAX_SESSIONS_PER_USER) t.sessions = t.sessions.slice(-MAX_SESSIONS_PER_USER);
 }
 
-// Best-effort полный список текущих держателей роли Модератора — нужен,
-// чтобы в лидерборде было видно и тех, у кого активности за период вообще
-// не было (не только тех, кто уже закрыл хоть одну сессию). На гигантском
-// сервере скан может быть неполным — тот же компромисс, что в
-// check_moder_sync.js для сверки таблицы.
+function parseCsv(text) {
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuotes) {
+            if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+            else field += c;
+        } else {
+            if (c === '"') inQuotes = true;
+            else if (c === ',') { row.push(field); field = ''; }
+            else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+            else if (c === '\r') {}
+            else field += c;
+        }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows;
+}
+
+async function fetchSheetCandidateIds() {
+    const resp = await fetch(MODER_SHEET_URL);
+    if (!resp.ok) throw new Error('Sheets HTTP ' + resp.status);
+    const text = await resp.text();
+    if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) throw new Error('таблица закрыта');
+    const ids = new Set();
+    for (const r of parseCsv(text)) {
+        const id = (r[2] || '').trim();
+        if (/^\d{15,22}$/.test(id)) ids.add(id);
+    }
+    return [...ids];
+}
+
+// guild.members.fetch() без фильтра на этом сервере (135k+ участников) почти
+// ни для кого не успевает прогрузить роли (см. комментарий в
+// check_moder_sync.js — проверено: 135009 участников, 0 с ролью). Основной
+// источник — адресная подгрузка по ID из той же гугл-таблицы, что и в
+// сверке; полный скан оставлен только как best-effort добавка для тех, кого
+// нет в таблице.
 async function fetchModeratorRoster(guild) {
     const roster = {};
+    let targetIds = [];
+    try {
+        targetIds = await fetchSheetCandidateIds();
+    } catch (e) {
+        console.error('[voice-activity] fetchSheetCandidateIds:', e.message);
+    }
+    const chunkSize = 100;
+    for (let i = 0; i < targetIds.length; i += chunkSize) {
+        const chunk = targetIds.slice(i, i + chunkSize);
+        try {
+            const fetched = await guild.members.fetch({ user: chunk, withPresences: false });
+            fetched.forEach(m => { if (m.roles.cache.has(ROLE_ID) && m.id !== SELFBOT_ACCOUNT_ID) roster[m.id] = m.displayName || m.user.username; });
+        } catch (e) { /* участник мог выйти с сервера — пропускаем */ }
+        await new Promise(r => setTimeout(r, 400));
+    }
     try {
         const fetchPromise = guild.members.fetch({ withPresences: false });
         const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), FULL_SCAN_TIMEOUT_MS));
