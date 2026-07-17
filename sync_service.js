@@ -196,7 +196,6 @@ function buildVoiceActivityResponse() {
     const weekKey = voiceIsoWeekKey(new Date());
     const mKey = voiceMonthKey(new Date());
     const weekDates = voiceCurrentWeekDates();
-    const todayKey = voiceDayKey(new Date());
     const totals = store.totals || {};
     const roster = store.moderator_roster || {};
     // Полный список текущих модеров, а не только тех, у кого уже была
@@ -205,18 +204,17 @@ function buildVoiceActivityResponse() {
     const ids = new Set([...Object.keys(roster), ...Object.keys(totals)]);
     const leaderboard = [...ids].map(id => {
         const t = totals[id] || {};
-        const sessionsToday = (t.sessions || [])
-            .filter(s => voiceDayKey(new Date(s.from)) === todayKey)
-            .map(s => ({ from: voiceClock(s.from), to: voiceClock(s.to), duration: voiceDuration(s.seconds) }));
         return {
             id, nick: roster[id] || t.nick || id,
             week_seconds: (t.weeks && t.weeks[weekKey]) || 0,
             month_seconds: (t.months && t.months[mKey]) || 0,
             days: weekDates.map(wd => {
                 const seconds = (t.days && t.days[wd.key]) || 0;
-                return { label: wd.label, full_label: wd.full_label, date: wd.date, seconds, duration: voiceDayDuration(seconds) };
+                const sessions = (t.sessions || [])
+                    .filter(s => voiceDayKey(new Date(s.from)) === wd.key)
+                    .map(s => ({ from: voiceClock(s.from), to: voiceClock(s.to), duration: voiceDuration(s.seconds) }));
+                return { label: wd.label, full_label: wd.full_label, date: wd.date, seconds, duration: voiceDayDuration(seconds), sessions };
             }),
-            sessions_today: sessionsToday,
         };
     }).sort((a, b) => b.week_seconds - a.week_seconds);
     const openSessions = store.open_sessions || {};

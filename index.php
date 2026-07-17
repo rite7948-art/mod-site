@@ -2064,6 +2064,16 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                     </div>`).join('');
             }
 
+            // Состояние "какой день выбран / открыт ли список сессий" по каждому
+            // человеку — хранится отдельно от данных, чтобы переживать перерисовку
+            // при обновлении/поиске.
+            const dayUiState = new Map();
+            const todayIdx = (new Date().getDay() + 6) % 7;
+            function getUiState(id) {
+                if (!dayUiState.has(id)) dayUiState.set(id, { dayIdx: todayIdx, open: false });
+                return dayUiState.get(id);
+            }
+
             function renderLeaderboard(board) {
                 if (board.length === 0) {
                     list.innerHTML = searchInput.value.trim()
@@ -2071,22 +2081,21 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         : '<div class="reports-empty">Пока нет данных активности.</div>';
                     return;
                 }
-                const todayIdx = (new Date().getDay() + 6) % 7;
                 list.innerHTML = board.map((row, i) => {
                     const days = row.days || [];
+                    const ui = getUiState(row.id);
                     const daysHtml = days.map((d, di) => `
-                        <div class="va-day-row${di === todayIdx ? ' is-today' : ''}">
+                        <button type="button" class="va-day-row${di === todayIdx ? ' is-today' : ''}${di === ui.dayIdx ? ' is-selected' : ''}" data-day-idx="${di}">
                             <div class="va-day-title"><i class="fas fa-shield-halved"></i> ${escapeHtml(d.full_label)} (${escapeHtml(d.date)}):</div>
                             <div class="va-day-detail">• За день: ${escapeHtml(d.duration)}</div>
-                        </div>`).join('');
-                    const sessions = row.sessions_today || [];
-                    const sessionsHtml = sessions.length ? `
-                        <div class="va-sessions">
-                            <div class="va-sessions-label">Сегодня по сессиям</div>
-                            ${sessions.map(s => `<div class="va-session-row"><span>${s.from} – ${s.to}</span><span class="va-session-dur">${s.duration}</span></div>`).join('')}
-                        </div>` : '';
+                        </button>`).join('');
+                    const selectedDay = days[ui.dayIdx] || null;
+                    const sessions = (selectedDay && selectedDay.sessions) || [];
+                    const sessionsHtml = sessions.length
+                        ? sessions.map(s => `<div class="va-session-row"><span>${s.from} – ${s.to}</span><span class="va-session-dur">${s.duration}</span></div>`).join('')
+                        : '<div class="va-sessions-empty">Сессий нет.</div>';
                     return `
-                        <div class="va-person">
+                        <div class="va-person" data-id="${escapeHtml(row.id)}">
                             <div class="va-person-top">
                                 <div class="va-avatar">${initial(row.nick)}</div>
                                 <div class="va-person-info">
@@ -2105,10 +2114,34 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                                 </div>
                             </div>
                             <div class="va-days-list">${daysHtml}</div>
-                            ${sessionsHtml}
+                            <button type="button" class="va-sessions-toggle${ui.open ? ' is-open' : ''}">
+                                <i class="fas fa-chevron-right"></i>
+                                <span>По сессиям — ${selectedDay ? escapeHtml(selectedDay.full_label) : ''}</span>
+                            </button>
+                            <div class="va-sessions"${ui.open ? '' : ' hidden'}>${sessionsHtml}</div>
                         </div>`;
                 }).join('');
             }
+
+            list.addEventListener('click', (e) => {
+                const person = e.target.closest('.va-person');
+                if (!person) return;
+                const id = person.dataset.id;
+                const ui = getUiState(id);
+                const dayBtn = e.target.closest('.va-day-row');
+                if (dayBtn) {
+                    const idx = Number(dayBtn.dataset.dayIdx);
+                    ui.dayIdx = idx;
+                    ui.open = true;
+                    applyVoiceSearch();
+                    return;
+                }
+                const toggleBtn = e.target.closest('.va-sessions-toggle');
+                if (toggleBtn) {
+                    ui.open = !ui.open;
+                    applyVoiceSearch();
+                }
+            });
 
             async function loadVoiceActivity() {
                 statusEl.textContent = 'Загрузка…';

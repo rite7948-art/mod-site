@@ -1114,16 +1114,33 @@ body.auth-locked .dashboard-container { visibility: hidden; }
 .va-total-value { font-size: 0.92rem; font-weight: 600; color: var(--text-primary); }
 .va-total-value.is-zero { color: var(--text-muted); font-weight: 400; }
 
-.va-days-list { display: flex; flex-direction: column; gap: 10px; }
-.va-day-row { padding: 2px 0; }
+.va-days-list { display: flex; flex-direction: column; gap: 4px; }
+.va-day-row {
+    display: block; width: 100%; box-sizing: border-box; font: inherit; color: inherit;
+    padding: 4px 8px; margin: -4px -8px; border-radius: 8px;
+    background: none; border: 1px solid transparent; text-align: left; cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.va-day-row:hover { background: var(--surface-3, rgba(255,255,255,0.04)); }
+.va-day-row.is-selected { background: var(--surface-3, rgba(255,255,255,0.06)); border-color: var(--border-color); }
 .va-day-title { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-primary); font-size: 0.86rem; }
 .va-day-title i { color: var(--accent); font-size: 0.8rem; }
 .va-day-row.is-today .va-day-title { color: var(--accent); }
 .va-day-row.is-today .va-day-title i { color: var(--ok); }
 .va-day-detail { font-size: 0.82rem; color: var(--text-secondary); margin-left: 20px; margin-top: 2px; }
 
-.va-sessions { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border-color); }
-.va-sessions-label { font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; }
+.va-sessions-toggle {
+    display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 0.7rem; padding: 6px 0 0;
+    background: none; border: none; border-top: 1px solid var(--border-color); cursor: pointer;
+    font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted); text-align: left;
+}
+.va-sessions-toggle:hover { color: var(--text-primary); }
+.va-sessions-toggle i { font-size: 0.6rem; transition: transform 0.12s ease; }
+.va-sessions-toggle.is-open i { transform: rotate(90deg); }
+.va-sessions { margin-top: 0.6rem; }
+.va-sessions[hidden] { display: none; }
+.va-sessions-empty { font-size: 0.82rem; color: var(--text-muted); padding: 3px 0; }
 .va-session-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.82rem; color: var(--text-secondary); padding: 3px 0; }
 .va-session-dur { font-family: var(--font-mono); color: var(--text-primary); }
 
