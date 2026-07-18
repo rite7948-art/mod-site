@@ -2556,6 +2556,7 @@ if ($syncServiceUrl && $syncToken && !empty($me['discord_id'])) {
                         : '';
                     return `
                     <div class="staff-card${m.banner ? ' has-banner' : ''}${isMe ? ' is-me' : ''}"${bannerAttr}>
+                        ${m.id ? `<a class="staff-discord-link" href="https://discord.com/users/${m.id}" target="_blank" rel="noopener" title="Открыть профиль в Discord"><i class="fab fa-discord"></i></a>` : ''}
                         ${m.avatar
                             ? `<img class="staff-avatar staff-avatar-img" src="${m.avatar}" alt="">`
                             : `<div class="staff-avatar"><i class="fas ${cat.icon}"></i></div>`}
