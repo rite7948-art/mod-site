@@ -36,6 +36,31 @@ if ($nick === '' || $id === '') {
     exit;
 }
 
+// Сдал «Собес на модера» — сразу добавляем строку в гугл-таблицу модеров
+// через тот же Apps Script webhook, что синкает выговоры (см.
+// SHEETS_SYNC_SETUP.md). Не блокирует остальной ответ — таблица не
+// настроена или недоступна, отчёт всё равно уходит в Telegram как раньше.
+if ($type === 'moder' && $passed) {
+    $sheetsUrl = getenv('SHEETS_WEBHOOK_URL') ?: '';
+    if ($sheetsUrl) {
+        $ch2 = curl_init($sheetsUrl);
+        curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch2, CURLOPT_POST, true);
+        curl_setopt($ch2, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch2, CURLOPT_POSTFIELDS, json_encode([
+            'token' => getenv('SHEETS_WEBHOOK_TOKEN') ?: '',
+            'action' => 'add_moderator',
+            'date' => date('d.m.Y'),
+            'discord_id' => $id,
+            'nick' => $nick,
+            'reviewer' => $reviewer,
+        ], JSON_UNESCAPED_UNICODE));
+        curl_setopt($ch2, CURLOPT_TIMEOUT, 10);
+        curl_exec($ch2);
+        curl_close($ch2);
+    }
+}
+
 $token = getenv('TELEGRAM_BOT_TOKEN') ?: '';
 $chatId = getenv('TELEGRAM_REPORTS_CHAT_ID') ?: '';
 $threadId = getenv('TELEGRAM_REPORTS_THREAD_ID') ?: '';
